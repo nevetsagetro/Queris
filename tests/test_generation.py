@@ -4,8 +4,8 @@ from typing import Any
 import pytest
 
 from queris.generation import (
-    DEFAULT_OPENAI_MODEL,
-    OpenAISQLGenerator,
+    DEFAULT_GEMINI_MODEL,
+    GeminiSQLGenerator,
     SQLGenerationError,
     build_sql_prompt,
 )
@@ -63,69 +63,73 @@ def test_build_sql_prompt_rejects_non_string_question(
 
 @dataclass
 class FakeResponse:
-    output_text: str
+    text: str | None
 
 
-class FakeResponses:
-    def __init__(self, output_text: str) -> None:
-        self.output_text = output_text
+class FakeModels:
+    def __init__(self, response_text: str | None) -> None:
+        self.response_text = response_text
         self.calls: list[dict[str, Any]] = []
 
-    def create(self, *, model: str, input: str) -> FakeResponse:
-        self.calls.append({"model": model, "input": input})
-        return FakeResponse(output_text=self.output_text)
+    def generate_content(self, *, model: str, contents: str) -> FakeResponse:
+        self.calls.append({"model": model, "contents": contents})
+        return FakeResponse(text=self.response_text)
 
 
 class FakeClient:
-    def __init__(self, output_text: str) -> None:
-        self.responses = FakeResponses(output_text)
+    def __init__(self, response_text: str | None) -> None:
+        self.models = FakeModels(response_text)
 
 
-def test_openai_generator_calls_responses_api(database_schema: DatabaseSchema) -> None:
+def test_gemini_generator_calls_generate_content(database_schema: DatabaseSchema) -> None:
     client = FakeClient("  SELECT COUNT(*) FROM orders  ")
-    generator = OpenAISQLGenerator(model="test-model", client=client)
+    generator = GeminiSQLGenerator(model="test-model", client=client)
 
     sql = generator.generate_sql(database_schema, "How many orders are there?")
 
     assert sql == "SELECT COUNT(*) FROM orders"
-    assert client.responses.calls[0]["model"] == "test-model"
-    assert "<database_schema>" in client.responses.calls[0]["input"]
+    assert client.models.calls[0]["model"] == "test-model"
+    assert "<database_schema>" in client.models.calls[0]["contents"]
 
 
-def test_openai_generator_uses_configured_model(
+def test_gemini_generator_uses_configured_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("OPENAI_MODEL", "configured-model")
+    monkeypatch.setenv("GEMINI_MODEL", "configured-model")
 
-    generator = OpenAISQLGenerator(client=FakeClient("SELECT 1"))
+    generator = GeminiSQLGenerator(client=FakeClient("SELECT 1"))
 
     assert generator.model == "configured-model"
 
 
-def test_openai_generator_uses_baseline_model(
+def test_gemini_generator_uses_baseline_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+    monkeypatch.delenv("GEMINI_MODEL", raising=False)
 
-    generator = OpenAISQLGenerator(client=FakeClient("SELECT 1"))
+    generator = GeminiSQLGenerator(client=FakeClient("SELECT 1"))
 
-    assert generator.model == DEFAULT_OPENAI_MODEL
+    assert generator.model == DEFAULT_GEMINI_MODEL
 
 
-def test_openai_generator_rejects_empty_model() -> None:
+def test_gemini_generator_rejects_empty_model() -> None:
     with pytest.raises(ValueError, match="model"):
-        OpenAISQLGenerator(model="", client=FakeClient("SELECT 1"))
+        GeminiSQLGenerator(model="", client=FakeClient("SELECT 1"))
 
 
-def test_openai_generator_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+def test_gemini_generator_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
 
-    with pytest.raises(SQLGenerationError, match="OPENAI_API_KEY"):
-        OpenAISQLGenerator()
+    with pytest.raises(SQLGenerationError, match="GEMINI_API_KEY"):
+        GeminiSQLGenerator()
 
 
-def test_openai_generator_rejects_empty_response(database_schema: DatabaseSchema) -> None:
-    generator = OpenAISQLGenerator(client=FakeClient("  "))
+@pytest.mark.parametrize("response_text", [None, "  "])
+def test_gemini_generator_rejects_empty_response(
+    database_schema: DatabaseSchema,
+    response_text: str | None,
+) -> None:
+    generator = GeminiSQLGenerator(client=FakeClient(response_text))
 
     with pytest.raises(SQLGenerationError, match="empty SQL"):
         generator.generate_sql(database_schema, "How many orders are there?")

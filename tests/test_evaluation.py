@@ -172,7 +172,7 @@ def test_cli_writes_all_records_before_failed_exit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     output_path = tmp_path / "baseline.jsonl"
-    monkeypatch.setattr(evaluation, "OpenAISQLGenerator", UnsafeGenerator)
+    monkeypatch.setattr(evaluation, "GeminiSQLGenerator", UnsafeGenerator)
     monkeypatch.setattr(
         sys,
         "argv",

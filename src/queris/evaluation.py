@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
-from queris.generation import OpenAISQLGenerator
+from queris.generation import GeminiSQLGenerator
 from queris.pipeline import QueryResult, SQLGenerator, run_text_to_sql
 from queris.schema import DatabaseSchema
 
@@ -189,7 +189,7 @@ def main() -> None:
     args = parser.parse_args()
 
     cases = load_evaluation_cases(args.questions)
-    generator = OpenAISQLGenerator()
+    generator = GeminiSQLGenerator()
     records = run_evaluation(
         args.database,
         cases,

@@ -3,11 +3,11 @@
 import os
 from typing import Protocol
 
-from openai import OpenAI
+from google import genai
 
 from queris.schema import DatabaseSchema
 
-DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"
+DEFAULT_GEMINI_MODEL = "gemini-3.5-flash"
 
 
 class SQLGenerationError(RuntimeError):
@@ -15,15 +15,15 @@ class SQLGenerationError(RuntimeError):
 
 
 class _Response(Protocol):
-    output_text: str
+    text: str | None
 
 
-class _ResponsesAPI(Protocol):
-    def create(self, *, model: str, input: str) -> _Response: ...
+class _ModelsAPI(Protocol):
+    def generate_content(self, *, model: str, contents: str) -> _Response: ...
 
 
-class _OpenAIClient(Protocol):
-    responses: _ResponsesAPI
+class _GeminiClient(Protocol):
+    models: _ModelsAPI
 
 
 def build_sql_prompt(schema: DatabaseSchema, question: str) -> str:
@@ -54,17 +54,17 @@ Follow these rules:
 """
 
 
-class OpenAISQLGenerator:
-    """Generate DuckDB SQL through the OpenAI Responses API."""
+class GeminiSQLGenerator:
+    """Generate DuckDB SQL through the Gemini API."""
 
     def __init__(
         self,
         *,
         model: str | None = None,
-        client: _OpenAIClient | None = None,
+        client: _GeminiClient | None = None,
     ) -> None:
         selected_model = (
-            model if model is not None else os.getenv("OPENAI_MODEL", DEFAULT_OPENAI_MODEL)
+            model if model is not None else os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
         )
         if not selected_model.strip():
             raise ValueError("model must be a non-empty string")
@@ -74,18 +74,18 @@ class OpenAISQLGenerator:
 
     def generate_sql(self, schema: DatabaseSchema, question: str) -> str:
         """Request one SQL string for a schema and natural-language question."""
-        response = self._client.responses.create(
+        response = self._client.models.generate_content(
             model=self.model,
-            input=build_sql_prompt(schema, question),
+            contents=build_sql_prompt(schema, question),
         )
-        sql = response.output_text.strip()
+        sql = response.text.strip() if response.text else ""
         if not sql:
-            raise SQLGenerationError("OpenAI returned an empty SQL response")
+            raise SQLGenerationError("Gemini returned an empty SQL response")
         return sql
 
     @staticmethod
-    def _create_client() -> OpenAI:
-        api_key = os.getenv("OPENAI_API_KEY")
+    def _create_client() -> genai.Client:
+        api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
-            raise SQLGenerationError("OPENAI_API_KEY is required for live SQL generation")
-        return OpenAI(api_key=api_key)
+            raise SQLGenerationError("GEMINI_API_KEY is required for live SQL generation")
+        return genai.Client(api_key=api_key)

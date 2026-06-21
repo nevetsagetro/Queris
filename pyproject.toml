@@ -12,7 +12,7 @@ license = "MIT"
 authors = [{ name = "Steven Ortega" }]
 dependencies = [
   "duckdb>=1.0",
-  "openai>=2.0",
+  "google-genai>=1.0",
   "pydantic>=2.0",
   "sqlglot>=25.0",
 ]
