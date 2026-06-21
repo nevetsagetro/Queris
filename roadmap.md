@@ -6,10 +6,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 ## Current focus
 
-- **Active stage:** Phase 2 — Baseline Text-to-SQL (`[~]`)
-- **Latest checkpoint:** ADR 0003 replaces OpenAI with the Gemini API while preserving the tested provider boundary, evaluation harness, and credential isolation.
-- **Current task:** configure `GEMINI_API_KEY` and run the live 10-question baseline.
-- **Resume point:** invoke `$queris-run-baseline-eval` with Gemini credentials supplied through the environment, require at least 7/10 correct results, and record the verified model and score without committing local results or secrets.
+- **Active stage:** Phase 3 — Safety Hardening (`[ ]`)
+- **Latest checkpoint:** the Phase 2 baseline run completed against Gemini with `7/10` correct results and the versioned 10-question harness preserved local JSONL audit records.
+- **Current task:** harden the SQL validation layer against the full forbidden-node set and bypass variants.
+- **Resume point:** start with the Phase 3 checklist in `roadmap.md`, covering `ATTACH`, `COPY`, pragmas, extension operations, and bypass cases before DuckDB execution.
 - **Last updated:** 2026-06-21
 
 ---
@@ -49,7 +49,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 - [x] Prompt template: full schema + user question → SQL string
 - [x] Pass every generated statement through the Phase 1 validator before execution
-- [ ] Manually test against ~10 hand-picked questions
+- [x] Manually test against ~10 hand-picked questions
 - [x] Log every (question, generated SQL, result) triple to a local file
 
 **Exit criteria:** at least 7/10 hand-picked questions return correct results, end-to-end, with full schema in the prompt.
