@@ -1,6 +1,6 @@
 # ADR 0002: Use OpenAI with Environment Credentials
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR 0003
 - **Date:** 2026-06-21
 
 ## Context

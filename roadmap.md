@@ -7,9 +7,9 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 2 — Baseline Text-to-SQL (`[~]`)
-- **Latest checkpoint:** the versioned 10-question set, typed scorer, JSONL audit logging, CLI, offline reference verification, and reusable evaluation skill are implemented.
-- **Current task:** run the live 10-question baseline; `OPENAI_API_KEY` was unavailable at the latest checkpoint.
-- **Resume point:** invoke `$queris-run-baseline-eval` with credentials supplied through the environment, require at least 7/10 correct results, and record the verified model and score without committing local results or secrets.
+- **Latest checkpoint:** ADR 0003 replaces OpenAI with the Gemini API while preserving the tested provider boundary, evaluation harness, and credential isolation.
+- **Current task:** configure `GEMINI_API_KEY` and run the live 10-question baseline.
+- **Resume point:** invoke `$queris-run-baseline-eval` with Gemini credentials supplied through the environment, require at least 7/10 correct results, and record the verified model and score without committing local results or secrets.
 - **Last updated:** 2026-06-21
 
 ---
@@ -19,7 +19,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 - [ ] Pick agent orchestrator: LangChain vs smolagents (deferred until Phase 5)
 - [ ] Pick vector store: DuckDB VSS vs pgvector (deferred until Phase 4)
-- [x] Pick LLM provider(s) and credential management approach (ADR 0002)
+- [x] Pick LLM provider(s) and credential management approach (ADR 0003; supersedes ADR 0002)
 - [x] Choose a deterministic synthetic retail dataset (ADR 0001)
 - [x] Confirm the initial layout (`src/queris/`, `tests/`, `evals/`, `data/`, and an optional `frontend/`)
 - [x] Set up `pyproject.toml`, linting, tests, and pre-commit

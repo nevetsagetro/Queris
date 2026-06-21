@@ -2,7 +2,7 @@
 
 ## Current status
 
-🚧 **Phase 2 is in progress.** Queris can generate a deterministic retail DuckDB database, introspect its full schema, request SQL through a replaceable OpenAI adapter, validate every generated statement, execute allowed queries on a read-only connection, and score a versioned 10-question baseline with local JSONL audit records. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+🚧 **Phase 2 is in progress.** Queris can generate a deterministic retail DuckDB database, introspect its full schema, request SQL through a replaceable Gemini adapter, validate every generated statement, execute allowed queries on a read-only connection, and score a versioned 10-question baseline with local JSONL audit records. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 
