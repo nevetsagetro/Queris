@@ -1,7 +1,7 @@
 """Typed LangGraph foundation for bounded text-to-SQL orchestration."""
 
 from pathlib import Path
-from typing import Any, Literal, NotRequired, Self, TypedDict
+from typing import Any, Literal, NotRequired, Protocol, Self, TypedDict
 
 import duckdb
 from langgraph.graph import END, START, StateGraph
@@ -9,11 +9,23 @@ from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, ConfigDict, model_validator
 
 from queris.database import execute_read_only, read_only_connection
-from queris.pipeline import SchemaSelector, SQLGenerator
+from queris.generation import SQLCorrectionContext
+from queris.pipeline import SchemaSelector
 from queris.schema import DatabaseSchema, introspect_schema
 from queris.sql_validation import SQLValidationError, parse_read_only
 
 FailureStage = Literal["validation", "execution"]
+
+
+class CorrectingSQLGenerator(Protocol):
+    """Generate initial SQL and corrections from failed-attempt context."""
+
+    def generate_sql(
+        self,
+        schema: DatabaseSchema,
+        question: str,
+        correction: SQLCorrectionContext | None = None,
+    ) -> str: ...
 
 
 class AgentQueryResult(BaseModel):
@@ -42,28 +54,37 @@ class _AgentState(TypedDict):
     question: str
     schema: DatabaseSchema
     sql: NotRequired[str]
-    status: NotRequired[Literal["success", "failure"]]
+    status: NotRequired[Literal["success", "failure"] | None]
     columns: NotRequired[tuple[str, ...]]
     rows: NotRequired[tuple[tuple[Any, ...], ...]]
-    failure_stage: NotRequired[FailureStage]
-    error: NotRequired[str]
+    failure_stage: NotRequired[FailureStage | None]
+    error: NotRequired[str | None]
+    correction: NotRequired[SQLCorrectionContext | None]
+    correction_attempted: NotRequired[bool]
 
 
 def run_agent_loop(
     database_path: str | Path,
     question: str,
-    generator: SQLGenerator,
+    generator: CorrectingSQLGenerator,
     schema_selector: SchemaSelector,
     *,
     sample_limit: int = 3,
 ) -> AgentQueryResult:
-    """Run the initial generate, validate, and execute graph once."""
+    """Run generate, validate, execute, and at most one correction pass."""
     normalized_question = _normalize_question(question)
 
     with read_only_connection(database_path) as connection:
         schema = introspect_schema(connection, sample_limit=sample_limit)
         graph = _build_graph(connection, generator, schema_selector)
-        state = graph.invoke({"question": normalized_question, "schema": schema})
+        state = graph.invoke(
+            {
+                "question": normalized_question,
+                "schema": schema,
+                "correction": None,
+                "correction_attempted": False,
+            }
+        )
 
     return AgentQueryResult(
         status=state["status"],
@@ -78,12 +99,21 @@ def run_agent_loop(
 
 def _build_graph(
     connection: duckdb.DuckDBPyConnection,
-    generator: SQLGenerator,
+    generator: CorrectingSQLGenerator,
     schema_selector: SchemaSelector,
 ) -> CompiledStateGraph[_AgentState, None, _AgentState, _AgentState]:
-    def generate(state: _AgentState) -> dict[str, str]:
+    def generate(state: _AgentState) -> dict[str, object]:
         selected_schema = schema_selector.select_schema(state["schema"], state["question"])
-        return {"sql": generator.generate_sql(selected_schema, state["question"])}
+        return {
+            "sql": generator.generate_sql(
+                selected_schema,
+                state["question"],
+                state.get("correction"),
+            ),
+            "status": None,
+            "failure_stage": None,
+            "error": None,
+        }
 
     def validate(state: _AgentState) -> dict[str, str]:
         try:
@@ -117,18 +147,43 @@ def _build_graph(
             "rows": tuple(tuple(row) for row in cursor.fetchall()),
         }
 
+    def prepare_correction(state: _AgentState) -> dict[str, object]:
+        failure_stage = state.get("failure_stage")
+        error = state.get("error")
+        if failure_stage is None or error is None:
+            raise RuntimeError("failed graph state is missing correction diagnostics")
+        return {
+            "correction": SQLCorrectionContext(
+                previous_sql=state["sql"],
+                failure_stage=failure_stage,
+                error=error,
+            ),
+            "correction_attempted": True,
+        }
+
+    def route_failed_state(state: _AgentState) -> str:
+        if state.get("status") != "failure":
+            return "success"
+        return "failure" if state.get("correction_attempted", False) else "correct"
+
     graph = StateGraph(_AgentState)
     graph.add_node("generate", generate)
     graph.add_node("validate", validate)
     graph.add_node("execute", execute)
+    graph.add_node("prepare_correction", prepare_correction)
     graph.add_edge(START, "generate")
     graph.add_edge("generate", "validate")
     graph.add_conditional_edges(
         "validate",
-        lambda state: "failure" if state.get("status") == "failure" else "execute",
-        {"failure": END, "execute": "execute"},
+        route_failed_state,
+        {"correct": "prepare_correction", "failure": END, "success": "execute"},
     )
-    graph.add_edge("execute", END)
+    graph.add_conditional_edges(
+        "execute",
+        route_failed_state,
+        {"correct": "prepare_correction", "failure": END, "success": END},
+    )
+    graph.add_edge("prepare_correction", "generate")
     return graph.compile()
 
 
