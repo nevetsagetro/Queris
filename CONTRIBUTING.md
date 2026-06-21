@@ -30,3 +30,15 @@ Each commit must represent one reviewable concern, include its tests or document
 ## Pull Requests
 
 Open a pull request into `main` with a concise problem statement, implementation summary, and verification commands. Link the relevant issue or roadmap item. Call out changes to security boundaries, dependencies, configuration, datasets, or architecture. Include screenshots only for UI changes. Prefer rebase-and-merge or squash-and-merge according to repository settings, and delete the branch after merge.
+
+## GitHub Authentication
+
+Use an SSH agent so the key passphrase is entered once per login session, never stored in the repository, `.env`, shell history, or SSH config:
+
+```bash
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
+ssh -T git@github.com
+```
+
+Start Codex from a terminal that inherits `SSH_AUTH_SOCK`, or configure the desktop keyring to load the key at login. `~/.ssh/config` may specify `IdentityFile ~/.ssh/id_ed25519` and `AddKeysToAgent yes`, but must not contain the passphrase.
