@@ -1,0 +1,4 @@
+interface:
+  display_name: "Resume Queris Work"
+  short_description: "Resume Queris from its recorded checkpoint"
+  default_prompt: "Use $queris-resume-work to resume Queris from the current roadmap checkpoint."

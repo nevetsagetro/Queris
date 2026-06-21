@@ -1,8 +1,8 @@
 # Queris: Evaluated Text-to-SQL Analytics Agent
 
-## Initial status
+## Current status
 
-🚧 **Phase 0 is in progress.** The Python package and quality tooling are scaffolded, but no functional pipeline, endpoints, datasets, or integrations exist yet. See the [`roadmap.md`](roadmap.md#current-focus) resume point for the active task and pending decisions.
+🚧 **Phase 4 is in progress.** Queris can generate a deterministic retail DuckDB database, introspect its full schema, request SQL through a replaceable Gemini adapter, validate every generated statement, execute allowed queries on a read-only connection, and score a versioned 10-question baseline with local JSONL audit records. Phase 3 blocks the complete adversarial SQL corpus before adapter execution. Schema-enrichment format version 1 now captures reviewed table and column descriptions, business terms, aliases, and units; the next work merges that optional metadata with live introspection. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 

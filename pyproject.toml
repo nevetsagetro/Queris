@@ -12,9 +12,16 @@ license = "MIT"
 authors = [{ name = "Steven Ortega" }]
 dependencies = [
   "duckdb>=1.0",
+  "google-genai>=1.0",
   "pydantic>=2.0",
+  "PyYAML>=6.0",
   "sqlglot>=25.0",
 ]
+
+[project.scripts]
+queris-eval = "queris.evaluation:main"
+queris-sample-data = "queris.sample_data:main"
+queris-schema = "queris.schema:main"
 
 [project.optional-dependencies]
 dev = [

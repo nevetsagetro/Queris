@@ -6,10 +6,11 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 ## Current focus
 
-- **Active stage:** Phase 0 — Decisions & Scaffolding (`[~]`)
-- **Latest checkpoint:** package tooling is verified; the Phase 1 read-only SQL parser and its initial policy tests are implemented.
-- **Current task:** select and document the sample dataset, then implement safe DuckDB loading and schema introspection.
-- **Resume point:** resolve the orchestrator, vector store, LLM provider, and sample dataset choices; record accepted choices in ADRs.
+- **Active stage:** Phase 4 — Schema Enrichment + RAG (`[~]`)
+- **Latest checkpoint:** merged reviewed, current enrichment metadata into introspected schemas while preserving names, types, and bounded sample summaries; activation is atomic for unreviewed or stale documents.
+- **Completed work:** completed Phase 3 and the first two Phase 4 items covering the enrichment format and its safe merge into live schemas.
+- **Pending next:** provide a command that drafts descriptions from schema metadata while requiring human review before activation.
+- **Resume point:** implement the third Phase 4 checklist item in `roadmap.md`; emit valid version 1 YAML with `reviewed: false` and test that drafts cannot become active without explicit review.
 - **Last updated:** 2026-06-21
 
 ---
@@ -17,10 +18,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Phase 0 — Decisions & Scaffolding
 **Goal:** resolve the blocking technical choices so Phase 1 can start unambiguously.
 
-- [ ] Pick agent orchestrator: LangChain vs smolagents
-- [ ] Pick vector store: DuckDB VSS vs pgvector
-- [ ] Pick LLM provider(s) and credential management approach
-- [ ] Choose sample dataset (recommendation: a public retail/e-commerce dataset with categories, regions, margins — matches the example question in the README)
+- [ ] Pick agent orchestrator: LangChain vs smolagents (deferred until Phase 5)
+- [ ] Pick vector store: DuckDB VSS vs pgvector (deferred until Phase 4)
+- [x] Pick LLM provider(s) and credential management approach (ADR 0003; supersedes ADR 0002)
+- [x] Choose a deterministic synthetic retail dataset (ADR 0001)
 - [x] Confirm the initial layout (`src/queris/`, `tests/`, `evals/`, `data/`, and an optional `frontend/`)
 - [x] Set up `pyproject.toml`, linting, tests, and pre-commit
 - [x] Document branch, commit, and pull-request conventions
@@ -32,13 +33,13 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Phase 1 — Safe DuckDB Core + Schema Introspection
 **Goal:** establish safe database access and structured schema inspection before adding an LLM.
 
-- [ ] Load sample dataset into a local DuckDB file
+- [x] Load sample dataset into a local DuckDB file
 - [x] Implement SQLGlot parsing and an explicit read-only statement whitelist
 - [x] Reject multi-statement queries before execution
-- [ ] Open execution connections with `read_only=True` as defense in depth
-- [ ] Write a schema-introspection function (tables, columns, types, sample values)
+- [x] Open execution connections with `read_only=True` as defense in depth
+- [x] Write a schema-introspection function (tables, columns, types, sample values)
 - [x] Unit tests for the initial allowed/forbidden SQL policy
-- [ ] Unit tests for schema introspection against the selected dataset
+- [x] Unit tests for schema introspection against the selected dataset
 
 **Exit criteria:** one command prints a structured JSON schema; all mutation and stacked-statement fixtures are blocked before DuckDB execution.
 
@@ -47,10 +48,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Phase 2 — Baseline Text-to-SQL (no RAG)
 **Goal:** prove a minimal, safe loop works end-to-end before adding retrieval.
 
-- [ ] Prompt template: full schema + user question → SQL string
-- [ ] Pass every generated statement through the Phase 1 validator before execution
-- [ ] Manually test against ~10 hand-picked questions
-- [ ] Log every (question, generated SQL, result) triple to a local file
+- [x] Prompt template: full schema + user question → SQL string
+- [x] Pass every generated statement through the Phase 1 validator before execution
+- [x] Manually test against ~10 hand-picked questions
+- [x] Log every (question, generated SQL, result) triple to a local file
 
 **Exit criteria:** at least 7/10 hand-picked questions return correct results, end-to-end, with full schema in the prompt.
 
@@ -59,10 +60,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Phase 3 — Safety Hardening
 **Goal:** expand the Phase 1 safety foundation and verify defense in depth.
 
-- [ ] Cover all forbidden SQLGlot node types, including `ATTACH`, `COPY`, pragmas, and extension operations
-- [ ] Verify legitimate `SELECT` and `WITH` queries pass unchanged
-- [ ] Add bypass attempts involving comments, casing, nesting, and unusual syntax
-- [ ] Confirm rejected SQL never reaches the database adapter
+- [x] Cover all forbidden SQLGlot node types, including `ATTACH`, `COPY`, pragmas, and extension operations
+- [x] Verify legitimate `SELECT` and `WITH` queries pass unchanged
+- [x] Add bypass attempts involving comments, casing, nesting, and unusual syntax
+- [x] Confirm rejected SQL never reaches the database adapter
 
 **Exit criteria:** 100% of a hand-written "malicious query" test set is blocked before reaching DuckDB.
 
@@ -71,8 +72,8 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Phase 4 — Schema Enrichment + RAG
 **Goal:** make ambiguous schemas understandable, then retrieve only the relevant tables and columns instead of sending the full schema.
 
-- [ ] Define a versioned YAML format for table and column descriptions, business terms, units, and aliases
-- [ ] Merge optional enrichment metadata with introspected names, types, and safe sample summaries
+- [x] Define a versioned YAML format for table and column descriptions, business terms, units, and aliases
+- [x] Merge optional enrichment metadata with introspected names, types, and safe sample summaries
 - [ ] Provide a command that drafts descriptions from schema metadata; require human review before activation
 - [ ] Validate enrichment against the live schema and report stale or unknown table/column references
 - [ ] Generate embeddings for enriched descriptions, raw identifiers, and safe sample summaries
