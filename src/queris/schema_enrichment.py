@@ -17,6 +17,7 @@ from pydantic import (
 from queris.schema import ColumnSchema, DatabaseSchema, TableSchema
 
 CleanString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+ReferenceIssueCode = Literal["unknown_schema", "unknown_table", "unknown_column"]
 
 
 class SemanticMetadata(BaseModel):
@@ -99,6 +100,30 @@ class SchemaEnrichment(BaseModel):
         return self
 
 
+class EnrichmentReferenceIssue(BaseModel):
+    """One enrichment reference that does not exist in the live schema."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    code: ReferenceIssueCode
+    schema_name: str
+    table_name: str | None = None
+    column_name: str | None = None
+
+
+class EnrichmentValidation(BaseModel):
+    """Structured result of checking enrichment against a live schema."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    issues: tuple[EnrichmentReferenceIssue, ...] = ()
+
+    @property
+    def valid(self) -> bool:
+        """Return whether every enrichment reference exists in the schema."""
+        return not self.issues
+
+
 def load_schema_enrichment(path: str | Path) -> SchemaEnrichment:
     """Load one YAML enrichment document using the safe YAML loader."""
     try:
@@ -108,6 +133,54 @@ def load_schema_enrichment(path: str | Path) -> SchemaEnrichment:
     return SchemaEnrichment.model_validate(raw_enrichment)
 
 
+def validate_schema_enrichment(
+    schema: DatabaseSchema,
+    enrichment: SchemaEnrichment,
+) -> EnrichmentValidation:
+    """Report enrichment references that are absent from the live schema."""
+    tables_by_reference = {(table.schema_name, table.name): table for table in schema.tables}
+    schema_names = {table.schema_name for table in schema.tables}
+    unknown_schemas: set[str] = set()
+    issues: list[EnrichmentReferenceIssue] = []
+
+    for table_metadata in enrichment.tables:
+        if table_metadata.schema_name not in schema_names:
+            if table_metadata.schema_name not in unknown_schemas:
+                issues.append(
+                    EnrichmentReferenceIssue(
+                        code="unknown_schema",
+                        schema_name=table_metadata.schema_name,
+                    )
+                )
+                unknown_schemas.add(table_metadata.schema_name)
+            continue
+
+        table = tables_by_reference.get((table_metadata.schema_name, table_metadata.name))
+        if table is None:
+            issues.append(
+                EnrichmentReferenceIssue(
+                    code="unknown_table",
+                    schema_name=table_metadata.schema_name,
+                    table_name=table_metadata.name,
+                )
+            )
+            continue
+
+        column_names = {column.name for column in table.columns}
+        issues.extend(
+            EnrichmentReferenceIssue(
+                code="unknown_column",
+                schema_name=table_metadata.schema_name,
+                table_name=table_metadata.name,
+                column_name=column.name,
+            )
+            for column in table_metadata.columns
+            if column.name not in column_names
+        )
+
+    return EnrichmentValidation(issues=tuple(issues))
+
+
 def merge_schema_enrichment(
     schema: DatabaseSchema,
     enrichment: SchemaEnrichment | None,
@@ -115,15 +188,8 @@ def merge_schema_enrichment(
     """Merge reviewed, current semantic metadata into an introspected schema."""
     if enrichment is None or not enrichment.reviewed:
         return schema
-
-    tables_by_reference = {(table.schema_name, table.name): table for table in schema.tables}
-    for table_metadata in enrichment.tables:
-        table = tables_by_reference.get((table_metadata.schema_name, table_metadata.name))
-        if table is None:
-            return schema
-        column_names = {column.name for column in table.columns}
-        if any(column.name not in column_names for column in table_metadata.columns):
-            return schema
+    if not validate_schema_enrichment(schema, enrichment).valid:
+        return schema
 
     enrichment_by_reference = {
         (table.schema_name, table.name): table for table in enrichment.tables

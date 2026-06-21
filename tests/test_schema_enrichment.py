@@ -3,11 +3,13 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from queris.schema import ColumnSchema, DatabaseSchema, TableSchema
+from queris.database import read_only_connection
+from queris.schema import ColumnSchema, DatabaseSchema, TableSchema, introspect_schema
 from queris.schema_enrichment import (
     SchemaEnrichment,
     load_schema_enrichment,
     merge_schema_enrichment,
+    validate_schema_enrichment,
 )
 
 RETAIL_ENRICHMENT_PATH = Path("metadata/retail.v1.yaml")
@@ -69,6 +71,19 @@ def test_load_schema_enrichment_reads_reviewed_versioned_metadata() -> None:
     revenue = next(column for column in order_items.columns if column.name == "revenue")
     assert revenue.unit == "USD"
     assert "sales" in revenue.business_terms
+
+
+def test_retail_enrichment_matches_live_schema(sample_database: Path) -> None:
+    with read_only_connection(sample_database) as connection:
+        schema = introspect_schema(connection, sample_limit=0)
+
+    validation = validate_schema_enrichment(
+        schema,
+        load_schema_enrichment(RETAIL_ENRICHMENT_PATH),
+    )
+
+    assert validation.valid is True
+    assert validation.issues == ()
 
 
 @pytest.mark.parametrize(
@@ -214,6 +229,50 @@ def test_merge_schema_enrichment_preserves_introspection_for_partial_metadata() 
     assert orders.columns[1].data_type == "DATE"
     assert orders.columns[1].sample_values == ("2026-01-01",)
     assert merged.tables[1] is schema.tables[1]
+
+
+def test_validate_schema_enrichment_reports_structured_stale_references() -> None:
+    enrichment = SchemaEnrichment.model_validate(
+        {
+            "version": 1,
+            "reviewed": True,
+            "tables": [
+                {
+                    "schema_name": "archive",
+                    "name": "orders",
+                    "description": "Stale schema.",
+                },
+                {
+                    "schema_name": "main",
+                    "name": "customers",
+                    "description": "Stale table.",
+                },
+                {
+                    "schema_name": "main",
+                    "name": "orders",
+                    "columns": [{"name": "customer_id", "description": "Stale column."}],
+                },
+            ],
+        }
+    )
+
+    validation = validate_schema_enrichment(_schema(), enrichment)
+
+    assert validation.valid is False
+    assert [issue.model_dump(exclude_none=True) for issue in validation.issues] == [
+        {"code": "unknown_schema", "schema_name": "archive"},
+        {
+            "code": "unknown_table",
+            "schema_name": "main",
+            "table_name": "customers",
+        },
+        {
+            "code": "unknown_column",
+            "schema_name": "main",
+            "table_name": "orders",
+            "column_name": "customer_id",
+        },
+    ]
 
 
 @pytest.mark.parametrize(
