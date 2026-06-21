@@ -37,6 +37,34 @@ class SchemaMatch(BaseModel):
     similarity: float
 
 
+class VectorSchemaRetriever:
+    """Retrieve schema matches from one DuckDB vector index."""
+
+    def __init__(
+        self,
+        database_path: str | Path,
+        provider: QueryEmbeddingProvider,
+        *,
+        top_k: int = 5,
+        load_vss: bool = True,
+    ) -> None:
+        _validate_top_k(top_k)
+        self.database_path = Path(database_path)
+        self.provider = provider
+        self.top_k = top_k
+        self.load_vss = load_vss
+
+    def retrieve(self, question: str) -> tuple[SchemaMatch, ...]:
+        """Return configured top-k matches for one question."""
+        return retrieve_schema(
+            self.database_path,
+            question,
+            self.provider,
+            top_k=self.top_k,
+            load_vss=self.load_vss,
+        )
+
+
 def retrieve_schema(
     database_path: str | Path,
     question: str,

@@ -27,7 +27,7 @@ class _GeminiClient(Protocol):
 
 
 def build_sql_prompt(schema: DatabaseSchema, question: str) -> str:
-    """Build a deterministic DuckDB prompt containing the complete schema."""
+    """Build a deterministic DuckDB prompt containing selected schema context."""
     if not isinstance(question, str):
         raise TypeError("question must be a string")
     normalized_question = question.strip()
