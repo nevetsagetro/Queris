@@ -120,7 +120,7 @@ def test_replace_schema_embeddings_creates_persisted_cosine_hnsw(
             "consistent dimension",
         ),
         (
-            (_embedding("orders", (1.0,)), _embedding("orders", (0.0,))),
+            (_embedding("orders", (1.0,)), _embedding("orders", (2.0,))),
             "duplicate document",
         ),
     ],
