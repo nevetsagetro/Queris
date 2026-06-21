@@ -11,7 +11,9 @@ Create every change from an updated `main`; do not commit directly to `main`. Us
 
 Keep a branch focused on one deliverable. Rebase it on `origin/main` before opening a pull request; do not merge `main` into the branch solely to synchronize it.
 
-When a roadmap checkpoint advances to the next item, phase, or stage, push the completed branch and verify its remote contains the checkpoint commit before creating the next branch. Treat a push failure as a blocked transition; do not continue new roadmap work only from an unpushed local checkpoint.
+When a roadmap checkpoint advances to the next item, phase, or stage, push the completed branch and verify its remote contains the checkpoint commit. Open or update a pull request against the correct base, confirm it is conflict-free and mergeable, and require configured checks and reviews to pass before merging through the pull request. Never push a local merge directly to the protected base.
+
+Items within one phase may use stacked pull requests while review is pending. Before starting another phase or stage, merge every prerequisite pull request, update local `main` from `origin/main`, and branch from that merged commit. Treat push failures, conflicts, failing checks, and missing review as blocked transitions.
 
 ## Commits
 
