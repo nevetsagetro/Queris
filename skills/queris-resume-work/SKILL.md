@@ -32,7 +32,8 @@ description: Resume and deliver Queris repository work from its recorded roadmap
 2. Implement the smallest roadmap item that reaches a verifiable terminal condition.
 3. Keep trusted setup writes separate from the read-only agent runtime.
 4. Add tests proportional to security and behavioral risk.
-5. Update the roadmap checklist and `Current focus` in the same change. Update `README.md` or `AGENTS.md` only when status, commands, or repository guidance changed.
+5. When the task introduces or changes a repeatable multi-step repository process, create or update a focused skill under `skills/`. Do not create skills for one-off implementation details.
+6. Update the roadmap checklist and `Current focus` in the same change. Update `README.md` or `AGENTS.md` only when status, commands, or repository guidance changed.
 
 ## Validate And Commit
 

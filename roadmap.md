@@ -6,10 +6,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 ## Current focus
 
-- **Active stage:** Decision checkpoint before Phase 2 (`[~]`)
-- **Latest checkpoint:** the deterministic retail fixture, read-only runtime connection, schema models, JSON CLI, and safety tests are verified.
-- **Current task:** select the LLM provider and credential strategy required for the Phase 2 baseline.
-- **Resume point:** record the LLM decision as ADR 0002; orchestrator and vector-store choices can remain deferred until Phases 5 and 4 respectively.
+- **Active stage:** Phase 2 — Baseline Text-to-SQL (`[~]`)
+- **Latest checkpoint:** ADR 0002 selects the OpenAI Responses API with environment-only credentials behind a replaceable generation boundary.
+- **Current task:** implement and test the full-schema prompt plus SQL generation adapter.
+- **Resume point:** complete the first Phase 2 checklist item, then connect generated SQL to the Phase 1 validator and read-only execution path.
 - **Last updated:** 2026-06-21
 
 ---
@@ -19,7 +19,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 - [ ] Pick agent orchestrator: LangChain vs smolagents (deferred until Phase 5)
 - [ ] Pick vector store: DuckDB VSS vs pgvector (deferred until Phase 4)
-- [ ] Pick LLM provider(s) and credential management approach
+- [x] Pick LLM provider(s) and credential management approach (ADR 0002)
 - [x] Choose a deterministic synthetic retail dataset (ADR 0001)
 - [x] Confirm the initial layout (`src/queris/`, `tests/`, `evals/`, `data/`, and an optional `frontend/`)
 - [x] Set up `pyproject.toml`, linting, tests, and pre-commit

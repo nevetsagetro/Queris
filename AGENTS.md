@@ -6,6 +6,8 @@ Queris has completed its safe DuckDB core and schema introspection. `README.md` 
 
 In a fresh session, invoke `$queris-resume-work` to recover context and follow the branch, validation, commit, and checkpoint workflow.
 
+When introducing or materially changing a repeatable multi-step repository process, create or update a focused skill under `skills/` and reference it from this file when contributors should invoke it. Keep one-off implementation details in the task or code instead of turning them into skills.
+
 Production code lives under `src/queris/` and tests mirror it in `tests/`. Keep database access, sample setup, schema inspection, SQL validation, and future evaluation concerns in focused modules. Store accepted decisions in `docs/adr/`. Generated databases and credentials never belong in Git.
 
 ## Build, Test, and Development Commands
