@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 5 — Agent Loop (`[~]`)
-- **Latest checkpoint:** added a typed LangGraph state machine for one generate, validate, and read-only execute pass.
-- **Completed work:** completed Phase 4, selected LangGraph, and implemented the Phase 5 orchestration foundation with explicit validation and execution failures.
-- **Pending next:** feed validation and DuckDB execution errors back to the SQL generator for correction.
-- **Resume point:** extend the generator boundary with correction context and route failed graph states back to generation; preserve validation-before-execution on every attempt.
+- **Latest checkpoint:** added one bounded correction pass that feeds validation or DuckDB diagnostics back to SQL generation as untrusted data.
+- **Completed work:** implemented the Phase 5 LangGraph foundation and verified correction after both unsafe and non-executable SQL attempts.
+- **Pending next:** make the retry cap configurable and fail gracefully when all attempts are exhausted.
+- **Resume point:** replace the fixed single correction with a validated retry limit (default 3) and expose exhausted-attempt state without weakening validation-before-execution.
 - **Last updated:** 2026-06-21
 
 ---
@@ -91,7 +91,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 **Goal:** turn the linear pipeline into a think-act-observe loop that recovers from its own SQL errors.
 
 - [x] Wrap generation, the Phase 1/3 validation layer, and execution into a single orchestrated loop
-- [ ] On DuckDB syntax/execution error, feed the error message back to the LLM and retry
+- [x] On DuckDB syntax/execution error, feed the error message back to the LLM and retry
 - [ ] Cap retries (configurable, default suggestion: 3) and fail gracefully with an explanation after the cap
 - [ ] Track retry count per query (needed for Phase 6 metrics)
 - [x] Integrate standalone LangGraph as selected in ADR 0007
