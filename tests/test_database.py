@@ -47,19 +47,22 @@ class RecordingConnection:
         return self
 
 
-def test_execute_read_only_validates_before_execution() -> None:
+def test_execute_read_only_rejects_malicious_query_set_before_execution(
+    malicious_sql: str,
+) -> None:
     connection = RecordingConnection()
 
-    with pytest.raises(SQLValidationError, match="Only read-only"):
-        execute_read_only(connection, "DROP TABLE orders")
+    with pytest.raises(SQLValidationError):
+        execute_read_only(connection, malicious_sql)
 
     assert connection.executed_sql == []
 
 
 def test_execute_read_only_sends_validated_query_to_connection() -> None:
     connection = RecordingConnection()
+    sql = "  /* preserve formatting */ SeLeCt 1  "
 
-    result = execute_read_only(connection, "SELECT 1")
+    result = execute_read_only(connection, sql)
 
     assert result is connection
-    assert connection.executed_sql == ["SELECT 1"]
+    assert connection.executed_sql == [sql]

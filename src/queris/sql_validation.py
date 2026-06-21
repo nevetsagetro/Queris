@@ -3,13 +3,67 @@
 from sqlglot import exp, parse
 from sqlglot.errors import ParseError
 
+FORBIDDEN_NODES = (
+    exp.Alter,
+    exp.Analyze,
+    exp.Attach,
+    exp.Cache,
+    exp.Command,
+    exp.Commit,
+    exp.Copy,
+    exp.Create,
+    exp.Delete,
+    exp.Detach,
+    exp.Drop,
+    exp.Execute,
+    exp.Export,
+    exp.Grant,
+    exp.Insert,
+    exp.Install,
+    exp.Into,
+    exp.LoadData,
+    exp.Merge,
+    exp.Pragma,
+    exp.Revoke,
+    exp.Rollback,
+    exp.Set,
+    exp.Transaction,
+    exp.TruncateTable,
+    exp.Uncache,
+    exp.Update,
+    exp.Use,
+)
+
+FORBIDDEN_FUNCTIONS = frozenset(
+    {
+        "CSV_SCAN",
+        "DELTA_SCAN",
+        "GLOB",
+        "ICEBERG_SCAN",
+        "MYSQL_QUERY",
+        "MYSQL_SCAN",
+        "PARQUET_SCAN",
+        "POSTGRES_QUERY",
+        "POSTGRES_SCAN",
+        "QUERY",
+        "QUERY_TABLE",
+        "READ_CSV",
+        "READ_CSV_AUTO",
+        "READ_JSON",
+        "READ_JSON_AUTO",
+        "READ_NDJSON",
+        "READ_PARQUET",
+        "SQLITE_SCAN",
+    }
+)
+
 
 class SQLValidationError(ValueError):
     """Raised when SQL does not satisfy the read-only policy."""
 
 
 def parse_read_only(sql: str) -> exp.Query:
-    """Parse one DuckDB query and reject statements that can mutate state."""
+    """Parse one DuckDB SELECT query and reject unsafe operations."""
     if not isinstance(sql, str) or not sql.strip():
         raise SQLValidationError("SQL must be a non-empty string")
 
@@ -22,10 +76,20 @@ def parse_read_only(sql: str) -> exp.Query:
         raise SQLValidationError("Exactly one SQL statement is required")
 
     statement = statements[0]
-    if not isinstance(statement, exp.Query):
-        raise SQLValidationError("Only read-only query statements are allowed")
+    if not isinstance(statement, (exp.Select, exp.SetOperation)):
+        raise SQLValidationError("Only SELECT and WITH query statements are allowed")
 
-    if statement.find(exp.Into):
-        raise SQLValidationError("SELECT INTO is not allowed")
+    forbidden_node = statement.find(*FORBIDDEN_NODES)
+    if forbidden_node is not None:
+        raise SQLValidationError(
+            f"Forbidden SQL operation: {type(forbidden_node).__name__.upper()}"
+        )
+
+    for function in statement.find_all(exp.Func):
+        function_name = (
+            function.name if isinstance(function, exp.Anonymous) else function.sql_name()
+        ).upper()
+        if function_name in FORBIDDEN_FUNCTIONS:
+            raise SQLValidationError(f"Forbidden SQL function: {function_name}")
 
     return statement
