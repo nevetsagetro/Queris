@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "outstanding-invoice-amount",
+      "question": "What is the outstanding invoice balance?",
+      "relevant_columns": [{"schema_name": "main", "table_name": "invoice_snapshots", "column_name": "amt"}]
+    },
+    {
+      "id": "inventory-units-on-hand",
+      "question": "How many inventory units are currently on hand?",
+      "relevant_columns": [{"schema_name": "main", "table_name": "inventory_balances", "column_name": "qty"}]
+    },
+    {
+      "id": "failed-quality-inspections",
+      "question": "Which quality inspections failed?",
+      "relevant_columns": [{"schema_name": "main", "table_name": "quality_inspections", "column_name": "flg_x"}]
+    },
+    {
+      "id": "shipment-package-count",
+      "question": "How many packages were shipped?",
+      "relevant_columns": [{"schema_name": "main", "table_name": "shipment_events", "column_name": "qty"}]
+    },
+    {
+      "id": "reimbursable-expense-amount",
+      "question": "What amount is reimbursable on expense claims?",
+      "relevant_columns": [{"schema_name": "main", "table_name": "expense_claims", "column_name": "amt"}]
+    },
+    {
+      "id": "escalated-service-tickets",
+      "question": "Which service tickets were escalated?",
+      "relevant_columns": [{"schema_name": "main", "table_name": "service_tickets", "column_name": "flg_x"}]
+    },
+    {
+      "id": "subscription-consumed-units",
+      "question": "How many subscription units were consumed?",
+      "relevant_columns": [{"schema_name": "main", "table_name": "subscription_usage", "column_name": "qty"}]
+    },
+    {
+      "id": "attempted-payment-amount",
+      "question": "What amount was attempted for customer payments?",
+      "relevant_columns": [{"schema_name": "main", "table_name": "payment_attempts", "column_name": "amt"}]
+    },
+    {
+      "id": "manufacturing-produced-units",
+      "question": "How many units were produced in manufacturing runs?",
+      "relevant_columns": [{"schema_name": "main", "table_name": "manufacturing_runs", "column_name": "qty"}]
+    },
+    {
+      "id": "approved-product-returns",
+      "question": "Which product returns were approved?",
+      "relevant_columns": [{"schema_name": "main", "table_name": "product_returns", "column_name": "flg_x"}]
+    }
+  ]
+}

@@ -2,8 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from queris.pipeline import run_text_to_sql
-from queris.schema import DatabaseSchema
+from queris.database import read_only_connection
+from queris.pipeline import FullSchemaSelector, RetrievedSchemaSelector, run_text_to_sql
+from queris.schema import DatabaseSchema, introspect_schema
+from queris.schema_retrieval import SchemaMatch
 from queris.sql_validation import SQLValidationError
 
 
@@ -32,6 +34,7 @@ def test_run_text_to_sql_executes_generated_query(sample_database: Path) -> None
         sample_database,
         "  How many orders are in each region?  ",
         generator,
+        FullSchemaSelector(),
         sample_limit=0,
     )
 
@@ -64,7 +67,12 @@ def test_run_text_to_sql_rejects_unsafe_generated_sql(
     generator = FakeGenerator(unsafe_sql)
 
     with pytest.raises(SQLValidationError):
-        run_text_to_sql(sample_database, "Delete all orders", generator)
+        run_text_to_sql(
+            sample_database,
+            "Delete all orders",
+            generator,
+            FullSchemaSelector(),
+        )
 
 
 @pytest.mark.parametrize("question", ["", "   "])
@@ -75,7 +83,7 @@ def test_run_text_to_sql_rejects_empty_question(
     generator = FakeGenerator("SELECT 1")
 
     with pytest.raises(ValueError, match="question"):
-        run_text_to_sql(sample_database, question, generator)
+        run_text_to_sql(sample_database, question, generator, FullSchemaSelector())
 
     assert generator.calls == []
 
@@ -84,6 +92,88 @@ def test_run_text_to_sql_rejects_non_string_question(sample_database: Path) -> N
     generator = FakeGenerator("SELECT 1")
 
     with pytest.raises(TypeError, match="question"):
-        run_text_to_sql(sample_database, None, generator)  # type: ignore[arg-type]
+        run_text_to_sql(  # type: ignore[arg-type]
+            sample_database,
+            None,
+            generator,
+            FullSchemaSelector(),
+        )
 
     assert generator.calls == []
+
+
+class FakeRetriever:
+    def __init__(self, matches: tuple[SchemaMatch, ...]) -> None:
+        self.matches = matches
+        self.questions: list[str] = []
+
+    def retrieve(self, question: str) -> tuple[SchemaMatch, ...]:
+        self.questions.append(question)
+        return self.matches
+
+
+def _match(
+    table_name: str,
+    *,
+    column_name: str | None = None,
+) -> SchemaMatch:
+    return SchemaMatch(
+        kind="column" if column_name else "table",
+        schema_name="main",
+        table_name=table_name,
+        column_name=column_name,
+        document_text="{}",
+        similarity=1.0,
+    )
+
+
+def test_run_text_to_sql_excludes_irrelevant_schema_from_generation(
+    sample_database: Path,
+) -> None:
+    generator = FakeGenerator("SELECT COUNT(*) FROM orders")
+    retriever = FakeRetriever((_match("orders"),))
+
+    result = run_text_to_sql(
+        sample_database,
+        "How many orders are there?",
+        generator,
+        RetrievedSchemaSelector(retriever),
+        sample_limit=0,
+    )
+
+    selected_schema, question = generator.calls[0]
+    assert [table.name for table in selected_schema.tables] == ["orders"]
+    assert [column.name for column in selected_schema.tables[0].columns] == [
+        "order_id",
+        "order_date",
+        "region_id",
+    ]
+    assert retriever.questions == [question]
+    assert result.rows == ((4,),)
+
+
+def test_retrieved_schema_selector_keeps_only_live_matched_columns(
+    sample_database: Path,
+) -> None:
+    with read_only_connection(sample_database) as connection:
+        schema = introspect_schema(connection, sample_limit=0)
+    selector = RetrievedSchemaSelector(
+        FakeRetriever(
+            (
+                _match("orders", column_name="order_date"),
+                _match("missing", column_name="stale"),
+            )
+        )
+    )
+
+    selected = selector.select_schema(schema, "Recent orders?")
+
+    assert [table.name for table in selected.tables] == ["orders"]
+    assert [column.name for column in selected.tables[0].columns] == ["order_date"]
+
+
+def test_retrieved_schema_selector_rejects_no_live_matches() -> None:
+    selector = RetrievedSchemaSelector(FakeRetriever((_match("missing"),)))
+
+    with pytest.raises(ValueError, match="did not select"):
+        selector.select_schema(DatabaseSchema(tables=()), "Question?")

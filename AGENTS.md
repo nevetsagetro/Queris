@@ -23,6 +23,7 @@ Create a virtual environment and install the package with development tools usin
 - `queris-sample-data data/retail.duckdb`: create the local deterministic fixture.
 - `queris-schema data/retail.duckdb --samples 3`: print structured schema JSON.
 - `queris-enrichment-draft data/retail.duckdb`: print inactive version 1 enrichment YAML for human review.
+- `queris-wide-data data/wide.duckdb`: create the deterministic 32-table ambiguous-schema fixture.
 - `queris-eval data/retail.duckdb`: run the versioned 10-question baseline and write ignored local JSONL results.
 
 ## Coding Style & Naming Conventions

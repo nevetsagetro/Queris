@@ -1,0 +1,80 @@
+version: 1
+reviewed: true
+tables:
+  - schema_name: main
+    name: invoice_snapshots
+    description: Point-in-time customer invoice balances.
+    columns:
+      - name: amt
+        description: Outstanding invoice balance.
+        business_terms: [accounts receivable, unpaid balance]
+        unit: USD
+  - schema_name: main
+    name: inventory_balances
+    description: Point-in-time product inventory balances.
+    columns:
+      - name: qty
+        description: Number of inventory units currently on hand.
+        business_terms: [stock on hand]
+        unit: units
+  - schema_name: main
+    name: quality_inspections
+    description: Manufacturing quality inspection outcomes.
+    columns:
+      - name: flg_x
+        description: True when the quality inspection failed.
+        aliases: [failed inspection flag]
+  - schema_name: main
+    name: shipment_events
+    description: Package shipment events recorded by logistics.
+    columns:
+      - name: qty
+        description: Number of packages shipped in the event.
+        aliases: [package count]
+        unit: packages
+  - schema_name: main
+    name: expense_claims
+    description: Employee expense claims submitted for reimbursement.
+    columns:
+      - name: amt
+        description: Reimbursable amount claimed by the employee.
+        aliases: [expense amount]
+        unit: USD
+  - schema_name: main
+    name: service_tickets
+    description: Customer support service tickets.
+    columns:
+      - name: flg_x
+        description: True when the service ticket was escalated.
+        aliases: [escalation flag]
+  - schema_name: main
+    name: subscription_usage
+    description: Metered customer subscription consumption.
+    columns:
+      - name: qty
+        description: Number of subscription units consumed.
+        aliases: [consumed units]
+        unit: units
+  - schema_name: main
+    name: payment_attempts
+    description: Attempts to collect customer payments.
+    columns:
+      - name: amt
+        description: Payment amount submitted for collection.
+        aliases: [attempted payment amount]
+        unit: USD
+  - schema_name: main
+    name: manufacturing_runs
+    description: Completed manufacturing production runs.
+    columns:
+      - name: qty
+        description: Number of units produced by the run.
+        aliases: [produced units]
+        unit: units
+  - schema_name: main
+    name: product_returns
+    description: Customer product return requests.
+    columns:
+      - name: flg_x
+        description: True when the product return was approved.
+        aliases: [return approval flag]
