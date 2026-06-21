@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 4 — Schema Enrichment + RAG (`[~]`)
-- **Latest checkpoint:** merged reviewed, current enrichment metadata into introspected schemas while preserving names, types, and bounded sample summaries; activation is atomic for unreviewed or stale documents.
-- **Completed work:** completed Phase 3 and the first two Phase 4 items covering the enrichment format and its safe merge into live schemas.
-- **Pending next:** provide a command that drafts descriptions from schema metadata while requiring human review before activation.
-- **Resume point:** implement the third Phase 4 checklist item in `roadmap.md`; emit valid version 1 YAML with `reviewed: false` and test that drafts cannot become active without explicit review.
+- **Latest checkpoint:** added `queris-enrichment-draft`, which reads schema metadata without samples and emits deterministic version 1 YAML with `reviewed: false`; drafts remain inactive until explicit review.
+- **Completed work:** completed Phase 3 and the first three Phase 4 items covering the enrichment format, safe live-schema merge, and inactive draft generation.
+- **Pending next:** validate enrichment against the live schema and report stale or unknown table and column references.
+- **Resume point:** implement the fourth Phase 4 checklist item in `roadmap.md`; return structured validation issues for stale references and test schema, table, and column mismatch reporting before activation.
 - **Last updated:** 2026-06-21
 
 ---
@@ -74,7 +74,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 - [x] Define a versioned YAML format for table and column descriptions, business terms, units, and aliases
 - [x] Merge optional enrichment metadata with introspected names, types, and safe sample summaries
-- [ ] Provide a command that drafts descriptions from schema metadata; require human review before activation
+- [x] Provide a command that drafts descriptions from schema metadata; require human review before activation
 - [ ] Validate enrichment against the live schema and report stale or unknown table/column references
 - [ ] Generate embeddings for enriched descriptions, raw identifiers, and safe sample summaries
 - [ ] Store embeddings in DuckDB VSS (or pgvector, per Phase 0 decision)
