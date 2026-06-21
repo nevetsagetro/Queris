@@ -2,7 +2,7 @@
 
 ## Current status
 
-🚧 **Phase 5 is in progress.** Queris can generate deterministic retail and 32-table ambiguous DuckDB fixtures, introspect schemas, request SQL through a replaceable Gemini adapter, validate every statement, execute allowed queries read-only, and score versioned generation and retrieval evaluations. Phase 4's enriched retrieval reaches 1.00 recall at five on the ambiguous-schema fixture. LangGraph is selected for the bounded self-correction loop, but that loop is not implemented yet. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+🚧 **Phase 5 is in progress.** Queris can generate deterministic retail and 32-table ambiguous DuckDB fixtures, introspect schemas, request SQL through a replaceable Gemini adapter, validate every statement, execute allowed queries read-only, and score versioned generation and retrieval evaluations. A typed LangGraph state machine now runs one generate, validate, and execute pass with explicit failure states; correction retries are the next step. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 

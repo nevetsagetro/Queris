@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 5 — Agent Loop (`[~]`)
-- **Latest checkpoint:** selected standalone LangGraph for explicit, typed generate/validate/execute/retry orchestration (ADR 0007).
-- **Completed work:** completed Phase 4 and resolved the deferred Phase 5 orchestrator decision.
-- **Pending next:** wrap generation, validation, and read-only execution in a LangGraph state machine.
-- **Resume point:** after ADR 0007 merges, add the `langgraph` dependency and implement the first Phase 5 checklist item with explicit success and failure states.
+- **Latest checkpoint:** added a typed LangGraph state machine for one generate, validate, and read-only execute pass.
+- **Completed work:** completed Phase 4, selected LangGraph, and implemented the Phase 5 orchestration foundation with explicit validation and execution failures.
+- **Pending next:** feed validation and DuckDB execution errors back to the SQL generator for correction.
+- **Resume point:** extend the generator boundary with correction context and route failed graph states back to generation; preserve validation-before-execution on every attempt.
 - **Last updated:** 2026-06-21
 
 ---
@@ -90,11 +90,11 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Phase 5 — Agent Loop: Generate → Validate → Execute → Self-Correct
 **Goal:** turn the linear pipeline into a think-act-observe loop that recovers from its own SQL errors.
 
-- [ ] Wrap generation, the Phase 1/3 validation layer, and execution into a single orchestrated loop
+- [x] Wrap generation, the Phase 1/3 validation layer, and execution into a single orchestrated loop
 - [ ] On DuckDB syntax/execution error, feed the error message back to the LLM and retry
 - [ ] Cap retries (configurable, default suggestion: 3) and fail gracefully with an explanation after the cap
 - [ ] Track retry count per query (needed for Phase 6 metrics)
-- [ ] Integrate chosen orchestrator (LangChain/smolagents) if not already wired in
+- [x] Integrate standalone LangGraph as selected in ADR 0007
 
 **Exit criteria:** a deliberately malformed-prone question (e.g. ambiguous join) self-corrects within the retry cap on a majority of runs.
 
