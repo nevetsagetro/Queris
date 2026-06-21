@@ -6,11 +6,11 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 ## Current focus
 
-- **Active stage:** Phase 4 — Schema Enrichment + RAG (`[~]`)
-- **Latest checkpoint:** measured the 10 wide-schema labels at `k=5`; enrichment improved macro precision from 0.14 to 0.20 and recall from 0.70 to 1.00.
-- **Completed work:** completed Phase 3 and all Phase 4 implementation, including deterministic offline retrieval comparison.
-- **Pending next:** merge the completed Phase 4 stack into `main` before transitioning to Phase 5.
-- **Resume point:** open `docs/complete-phase4` against `main`, merge it after required checks and review pass, update local `main`, then select the Phase 5 orchestrator.
+- **Active stage:** Phase 5 — Agent Loop (`[~]`)
+- **Latest checkpoint:** selected standalone LangGraph for explicit, typed generate/validate/execute/retry orchestration (ADR 0007).
+- **Completed work:** completed Phase 4 and resolved the deferred Phase 5 orchestrator decision.
+- **Pending next:** wrap generation, validation, and read-only execution in a LangGraph state machine.
+- **Resume point:** after ADR 0007 merges, add the `langgraph` dependency and implement the first Phase 5 checklist item with explicit success and failure states.
 - **Last updated:** 2026-06-21
 
 ---
@@ -18,7 +18,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Phase 0 — Decisions & Scaffolding
 **Goal:** resolve the blocking technical choices so Phase 1 can start unambiguously.
 
-- [ ] Pick agent orchestrator: LangChain vs smolagents (deferred until Phase 5)
+- [x] Pick agent orchestrator: standalone LangGraph (ADR 0007)
 - [x] Pick vector store: DuckDB VSS for the rebuildable local MVP (ADR 0006)
 - [x] Pick LLM provider(s) and credential management approach (ADR 0003; supersedes ADR 0002)
 - [x] Choose a deterministic synthetic retail dataset (ADR 0001)

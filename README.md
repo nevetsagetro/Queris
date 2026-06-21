@@ -2,7 +2,7 @@
 
 ## Current status
 
-🚧 **Phase 4 implementation is complete pending review and merge.** Queris can generate deterministic retail and 32-table ambiguous DuckDB fixtures, introspect schemas, request SQL through a replaceable Gemini adapter, validate every statement, execute allowed queries read-only, and score versioned generation and retrieval evaluations. Phase 3 blocks the adversarial SQL corpus before adapter execution. Reviewed schema enrichment is validated against live references, embedded into a separate DuckDB VSS index, retrieved by cosine similarity, and reduced to live schema context before SQL generation. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+🚧 **Phase 5 is in progress.** Queris can generate deterministic retail and 32-table ambiguous DuckDB fixtures, introspect schemas, request SQL through a replaceable Gemini adapter, validate every statement, execute allowed queries read-only, and score versioned generation and retrieval evaluations. Phase 4's enriched retrieval reaches 1.00 recall at five on the ambiguous-schema fixture. LangGraph is selected for the bounded self-correction loop, but that loop is not implemented yet. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 
@@ -28,11 +28,11 @@ The differentiator versus an "API-calling chatbot" is the **evaluation layer**: 
 | Vector schema search | DuckDB VSS for the rebuildable local MVP (ADR 0006) |
 | Backend / API | FastAPI + Pydantic |
 | SQL validation/parsing | SQLGlot |
-| Agent orchestration | LangChain or smolagents |
+| Agent orchestration | Standalone LangGraph (ADR 0007) |
 | Frontend / demo | Streamlit (MVP) → React/TypeScript (production) |
 | Infrastructure | Docker, GitHub Actions (CI/CD + automated evals) |
 
-*This is the target stack, not confirmation that these components are installed or implemented. Alternatives shown in the table remain pending decisions.*
+*This is the target stack, not confirmation that every component is installed or implemented.*
 
 ---
 
