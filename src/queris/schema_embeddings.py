@@ -42,6 +42,8 @@ class SchemaEmbedding(BaseModel):
             raise ValueError("embedding vector must not be empty")
         if not all(math.isfinite(value) for value in vector):
             raise ValueError("embedding vector must contain only finite values")
+        if not any(value != 0.0 for value in vector):
+            raise ValueError("embedding vector must not be a zero vector")
         return vector
 
 
@@ -141,6 +143,23 @@ class GeminiEmbeddingProvider:
         )
         embeddings = response.embeddings or []
         return tuple(tuple(embedding.values or ()) for embedding in embeddings)
+
+    def embed_query(self, text: str) -> tuple[float, ...]:
+        """Embed one retrieval query."""
+        response = self._client.models.embed_content(
+            model=self.model,
+            contents=[text],
+            config=types.EmbedContentConfig(task_type="RETRIEVAL_QUERY"),
+        )
+        embeddings = response.embeddings or []
+        if len(embeddings) != 1 or not embeddings[0].values:
+            raise SchemaEmbeddingError("Gemini returned an invalid query embedding")
+        vector = tuple(embeddings[0].values)
+        if not all(math.isfinite(value) for value in vector) or not any(
+            value != 0.0 for value in vector
+        ):
+            raise SchemaEmbeddingError("Gemini returned an invalid query embedding")
+        return vector
 
     @staticmethod
     def _create_client() -> genai.Client:

@@ -93,6 +93,7 @@ def test_embed_schema_batches_documents_and_preserves_order() -> None:
         (((1.0,), (1.0, 2.0)), "inconsistent dimensions"),
         (((), ()), "invalid vector"),
         (((math.nan,), (1.0,)), "invalid vector"),
+        (((0.0, 0.0), (1.0, 0.0)), "invalid vector"),
     ],
 )
 def test_embed_schema_rejects_invalid_provider_responses(
@@ -140,6 +141,18 @@ def test_gemini_embedding_provider_uses_retrieval_document_batch() -> None:
     assert call["model"] == "test-embedding-model"
     assert call["contents"] == ["first", "second"]
     assert call["config"].task_type == "RETRIEVAL_DOCUMENT"
+
+
+def test_gemini_embedding_provider_uses_retrieval_query_task() -> None:
+    client = FakeClient()
+    provider = GeminiEmbeddingProvider(model="test-embedding-model", client=client)
+
+    vector = provider.embed_query("Which orders had the most revenue?")
+
+    assert vector == (1.0, 2.0)
+    call = client.models.calls[0]
+    assert call["contents"] == ["Which orders had the most revenue?"]
+    assert call["config"].task_type == "RETRIEVAL_QUERY"
 
 
 def test_gemini_embedding_provider_uses_configured_model(
