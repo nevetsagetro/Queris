@@ -20,6 +20,7 @@ dependencies = [
 
 [project.scripts]
 queris-eval = "queris.evaluation:main"
+queris-enrichment-draft = "queris.enrichment_draft:main"
 queris-sample-data = "queris.sample_data:main"
 queris-schema = "queris.schema:main"
 
