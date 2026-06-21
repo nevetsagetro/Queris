@@ -16,6 +16,9 @@ dependencies = [
   "sqlglot>=25.0",
 ]
 
+[project.scripts]
+queris-sample-data = "queris.sample_data:main"
+
 [project.optional-dependencies]
 dev = [
   "pre-commit>=3.0",
