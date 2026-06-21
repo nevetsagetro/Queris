@@ -7,9 +7,9 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 2 — Baseline Text-to-SQL (`[~]`)
-- **Latest checkpoint:** ADR 0002 selects the OpenAI Responses API with environment-only credentials behind a replaceable generation boundary.
-- **Current task:** implement and test the full-schema prompt plus SQL generation adapter.
-- **Resume point:** complete the first Phase 2 checklist item, then connect generated SQL to the Phase 1 validator and read-only execution path.
+- **Latest checkpoint:** ADR 0002 and the tested OpenAI generation adapter provide a deterministic full-schema prompt with environment-only credentials.
+- **Current task:** connect generated SQL to the Phase 1 validator and read-only execution path.
+- **Resume point:** implement the smallest end-to-end pipeline slice; every generated statement must pass `parse_read_only` before DuckDB execution.
 - **Last updated:** 2026-06-21
 
 ---
@@ -47,7 +47,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Phase 2 — Baseline Text-to-SQL (no RAG)
 **Goal:** prove a minimal, safe loop works end-to-end before adding retrieval.
 
-- [ ] Prompt template: full schema + user question → SQL string
+- [x] Prompt template: full schema + user question → SQL string
 - [ ] Pass every generated statement through the Phase 1 validator before execution
 - [ ] Manually test against ~10 hand-picked questions
 - [ ] Log every (question, generated SQL, result) triple to a local file
