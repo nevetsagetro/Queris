@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 4 — Schema Enrichment + RAG (`[~]`)
-- **Latest checkpoint:** added a generated 32-table schema that reuses `amt`, `qty`, and `flg_x`, with reviewed enrichment and 10 versioned question-to-column labels.
-- **Completed work:** completed Phase 3 and the first nine Phase 4 items through the deterministic ambiguous-schema evaluation fixture.
-- **Pending next:** compare retrieval quality with and without enrichment to quantify its contribution.
-- **Resume point:** implement the final Phase 4 checklist item in `roadmap.md`; add offline deterministic embeddings for repeatable tests, measure precision/recall at fixed k against the 10 labels, and document the enriched-versus-raw result.
+- **Latest checkpoint:** measured the 10 wide-schema labels at `k=5`; enrichment improved macro precision from 0.14 to 0.20 and recall from 0.70 to 1.00.
+- **Completed work:** completed Phase 3 and all Phase 4 implementation, including deterministic offline retrieval comparison.
+- **Pending next:** open, review, and merge the final stacked Phase 4 pull request before transitioning to Phase 5.
+- **Resume point:** open `feat/enrichment-retrieval-eval` against `feat/wide-schema-fixture`, then merge the Phase 4 stack before selecting the Phase 5 orchestrator.
 - **Last updated:** 2026-06-21
 
 ---
@@ -81,7 +81,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 - [x] Implement cosine-similarity retrieval: question → top-k relevant tables/columns
 - [x] Replace "full schema in prompt" with "retrieved schema in prompt" in the pipeline from Phase 2
 - [x] Add a synthetic wide schema (30+ tables) with ambiguous identifiers such as `amt`, `qty`, and `flg_x`
-- [ ] Compare retrieval quality with and without enrichment to quantify its contribution
+- [x] Compare retrieval quality with and without enrichment to quantify its contribution
 
 **Exit criteria:** retrieval precision/recall is measured against hand-labeled question-to-column pairs, and enrichment produces a documented improvement on the ambiguous-schema fixture.
 

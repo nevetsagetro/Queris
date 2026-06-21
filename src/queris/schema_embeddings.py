@@ -1,8 +1,10 @@
 """Deterministic schema documents and embedding-provider boundary."""
 
+import hashlib
 import json
 import math
 import os
+import re
 from typing import Any, Literal, Protocol
 
 from google import genai
@@ -13,6 +15,9 @@ from queris.schema import ColumnSchema, DatabaseSchema, TableSchema
 
 DEFAULT_GEMINI_EMBEDDING_MODEL = "gemini-embedding-001"
 MAX_SAMPLE_TEXT_LENGTH = 100
+DEFAULT_DETERMINISTIC_EMBEDDING_DIMENSIONS = 2048
+DETERMINISTIC_EMBEDDING_MODEL = "deterministic-token-hash-v1"
+_TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
 
 
 class SchemaDocument(BaseModel):
@@ -55,6 +60,36 @@ class EmbeddingProvider(Protocol):
 
 class SchemaEmbeddingError(RuntimeError):
     """Raised when an embedding provider returns an unusable response."""
+
+
+class DeterministicEmbeddingProvider:
+    """Create stable token-hash vectors for offline retrieval evaluation."""
+
+    model = DETERMINISTIC_EMBEDDING_MODEL
+
+    def __init__(self, *, dimensions: int = DEFAULT_DETERMINISTIC_EMBEDDING_DIMENSIONS) -> None:
+        if type(dimensions) is not int or dimensions < 1:
+            raise ValueError("dimensions must be a positive integer")
+        self.dimensions = dimensions
+
+    def embed(self, texts: tuple[str, ...]) -> tuple[tuple[float, ...], ...]:
+        """Embed documents in input order without credentials or network access."""
+        return tuple(self._embed_text(text) for text in texts)
+
+    def embed_query(self, text: str) -> tuple[float, ...]:
+        """Embed one query in the same deterministic token space."""
+        return self._embed_text(text)
+
+    def _embed_text(self, text: str) -> tuple[float, ...]:
+        tokens = set(_TOKEN_PATTERN.findall(text.casefold()))
+        if not tokens:
+            raise SchemaEmbeddingError("text must contain at least one alphanumeric token")
+        vector = [0.0] * self.dimensions
+        for token in tokens:
+            digest = hashlib.blake2b(token.encode("utf-8"), digest_size=8).digest()
+            index = int.from_bytes(digest, byteorder="big") % self.dimensions
+            vector[index] += 1.0
+        return tuple(vector)
 
 
 class _ContentEmbedding(Protocol):
