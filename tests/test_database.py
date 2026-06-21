@@ -7,11 +7,6 @@ from queris.database import read_only_connection
 from queris.sample_data import create_sample_database
 
 
-@pytest.fixture
-def sample_database(tmp_path: Path) -> Path:
-    return create_sample_database(tmp_path / "retail.duckdb")
-
-
 def test_create_sample_database_loads_expected_rows(sample_database: Path) -> None:
     with read_only_connection(sample_database) as connection:
         assert connection.execute("SELECT count(*) FROM orders").fetchone() == (4,)

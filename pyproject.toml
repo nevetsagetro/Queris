@@ -18,6 +18,7 @@ dependencies = [
 
 [project.scripts]
 queris-sample-data = "queris.sample_data:main"
+queris-schema = "queris.schema:main"
 
 [project.optional-dependencies]
 dev = [
