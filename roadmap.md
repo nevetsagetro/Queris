@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 4 — Schema Enrichment + RAG (`[~]`)
-- **Latest checkpoint:** defined schema-enrichment format version 1 with strict Pydantic validation, safe YAML loading, explicit review state, and reviewed retail metadata; ADR 0004 records the contract.
-- **Completed work:** completed Phase 3 and the first Phase 4 item covering versioned table/column descriptions, business terms, aliases, and units.
-- **Pending next:** merge optional enrichment metadata with introspected names, types, and bounded sample summaries.
-- **Resume point:** implement the second Phase 4 checklist item in `roadmap.md`; keep unreviewed or stale metadata out of active enriched schemas and add merge tests for partial metadata.
+- **Latest checkpoint:** merged reviewed, current enrichment metadata into introspected schemas while preserving names, types, and bounded sample summaries; activation is atomic for unreviewed or stale documents.
+- **Completed work:** completed Phase 3 and the first two Phase 4 items covering the enrichment format and its safe merge into live schemas.
+- **Pending next:** provide a command that drafts descriptions from schema metadata while requiring human review before activation.
+- **Resume point:** implement the third Phase 4 checklist item in `roadmap.md`; emit valid version 1 YAML with `reviewed: false` and test that drafts cannot become active without explicit review.
 - **Last updated:** 2026-06-21
 
 ---
@@ -73,7 +73,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 **Goal:** make ambiguous schemas understandable, then retrieve only the relevant tables and columns instead of sending the full schema.
 
 - [x] Define a versioned YAML format for table and column descriptions, business terms, units, and aliases
-- [ ] Merge optional enrichment metadata with introspected names, types, and safe sample summaries
+- [x] Merge optional enrichment metadata with introspected names, types, and safe sample summaries
 - [ ] Provide a command that drafts descriptions from schema metadata; require human review before activation
 - [ ] Validate enrichment against the live schema and report stale or unknown table/column references
 - [ ] Generate embeddings for enriched descriptions, raw identifiers, and safe sample summaries
