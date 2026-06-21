@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run Queris Baseline Evaluation"
+  short_description: "Run and record the Queris baseline evaluation"
+  default_prompt: "Use $queris-run-baseline-eval to run the versioned text-to-SQL baseline and record its result."

@@ -6,6 +6,8 @@ Queris has completed its safe DuckDB core and schema introspection. `README.md` 
 
 In a fresh session, invoke `$queris-resume-work` to recover context and follow the branch, validation, commit, and checkpoint workflow.
 
+Invoke `$queris-run-baseline-eval` when running or recording the versioned Phase 2 text-to-SQL baseline.
+
 When introducing or materially changing a repeatable multi-step repository process, create or update a focused skill under `skills/` and reference it from this file when contributors should invoke it. Keep one-off implementation details in the task or code instead of turning them into skills.
 
 Production code lives under `src/queris/` and tests mirror it in `tests/`. Keep database access, sample setup, schema inspection, SQL validation, and future evaluation concerns in focused modules. Store accepted decisions in `docs/adr/`. Generated databases and credentials never belong in Git.
@@ -20,6 +22,7 @@ Create a virtual environment and install the package with development tools usin
 - `pre-commit run --all-files`: run repository checks before proposing a commit.
 - `queris-sample-data data/retail.duckdb`: create the local deterministic fixture.
 - `queris-schema data/retail.duckdb --samples 3`: print structured schema JSON.
+- `queris-eval data/retail.duckdb`: run the versioned 10-question baseline and write ignored local JSONL results.
 
 ## Coding Style & Naming Conventions
 
