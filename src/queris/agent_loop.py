@@ -6,7 +6,7 @@ from typing import Any, Literal, NotRequired, Protocol, Self, TypedDict
 import duckdb
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from queris.database import execute_read_only, read_only_connection
 from queris.generation import SQLCorrectionContext
@@ -43,6 +43,7 @@ class AgentQueryResult(BaseModel):
     rows: tuple[tuple[Any, ...], ...] = ()
     failure_stage: FailureStage | None = None
     error: str | None = None
+    retry_count: int = Field(ge=0)
     retries_exhausted: bool = False
     explanation: str | None = None
 
@@ -120,6 +121,7 @@ def run_agent_loop(
         rows=state.get("rows", ()),
         failure_stage=state.get("failure_stage"),
         error=state.get("error"),
+        retry_count=state["retry_count"],
         retries_exhausted=failed,
         explanation=_build_exhaustion_explanation(state["retry_count"]) if failed else None,
     )

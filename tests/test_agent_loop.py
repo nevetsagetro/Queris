@@ -44,6 +44,7 @@ def test_agent_loop_returns_typed_success(sample_database: Path) -> None:
     assert result.rows == ((4,),)
     assert result.failure_stage is None
     assert result.error is None
+    assert result.retry_count == 0
     assert result.retries_exhausted is False
     assert result.explanation is None
     assert generator.calls[0][1] == result.question
@@ -75,6 +76,7 @@ def test_agent_loop_stops_unsafe_sql_before_execution(
     assert len(generator.calls) == DEFAULT_MAX_RETRIES + 1
     assert all(call[2] is not None for call in generator.calls[1:])
     assert result.retries_exhausted is True
+    assert result.retry_count == DEFAULT_MAX_RETRIES
     assert result.explanation == "Could not produce executable read-only SQL after 4 attempts."
 
 
@@ -98,6 +100,7 @@ def test_agent_loop_returns_execution_failure_for_invalid_query(
     assert len(generator.calls) == DEFAULT_MAX_RETRIES + 1
     assert all(call[2] is not None for call in generator.calls[1:])
     assert result.retries_exhausted is True
+    assert result.retry_count == DEFAULT_MAX_RETRIES
     assert result.explanation == "Could not produce executable read-only SQL after 4 attempts."
 
 
@@ -127,6 +130,7 @@ def test_agent_loop_corrects_validation_failure_before_execution(
 
     assert result.status == "success"
     assert result.rows == ((4,),)
+    assert result.retry_count == 1
     assert executed_sql == ["SELECT COUNT(*) FROM orders"]
     correction = generator.calls[1][2]
     assert correction is not None
@@ -150,6 +154,7 @@ def test_agent_loop_corrects_execution_failure(sample_database: Path) -> None:
     assert result.status == "success"
     assert result.sql == "SELECT COUNT(*) FROM orders"
     assert result.rows == ((4,),)
+    assert result.retry_count == 1
     correction = generator.calls[1][2]
     assert correction is not None
     assert correction.previous_sql == "SELECT COUNT(*) FROM missing_table"
@@ -175,6 +180,7 @@ def test_agent_loop_uses_configured_retry_cap(sample_database: Path) -> None:
     assert result.status == "success"
     assert result.rows == ((4,),)
     assert len(generator.calls) == 3
+    assert result.retry_count == 2
 
 
 def test_agent_loop_can_disable_retries(sample_database: Path) -> None:
@@ -190,6 +196,7 @@ def test_agent_loop_can_disable_retries(sample_database: Path) -> None:
 
     assert result.status == "failure"
     assert result.retries_exhausted is True
+    assert result.retry_count == 0
     assert result.explanation == "Could not produce executable read-only SQL after 1 attempt."
     assert len(generator.calls) == 1
 
@@ -207,6 +214,7 @@ def test_agent_loop_supports_maximum_retry_cap(sample_database: Path) -> None:
 
     assert result.status == "failure"
     assert result.retries_exhausted is True
+    assert result.retry_count == MAX_RETRIES
     assert len(generator.calls) == MAX_RETRIES + 1
 
 
