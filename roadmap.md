@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 4 — Schema Enrichment + RAG (`[~]`)
-- **Latest checkpoint:** added structured live-schema validation for enrichment metadata, reporting unknown schemas, tables, and columns before atomic activation.
-- **Completed work:** completed Phase 3 and the first four Phase 4 items covering the enrichment format, safe merge, inactive draft generation, and stale-reference validation.
-- **Pending next:** generate embeddings for enriched descriptions, raw identifiers, and safe sample summaries.
-- **Resume point:** implement the fifth Phase 4 checklist item in `roadmap.md`; define the deterministic text representation and embedding adapter contract, then test coverage of raw identifiers, reviewed metadata, and bounded samples.
+- **Latest checkpoint:** added deterministic table and column embedding documents covering identifiers, reviewed enrichment, types, and bounded samples, plus a provider-neutral batch contract and Gemini adapter recorded in ADR 0005.
+- **Completed work:** completed Phase 3 and the first five Phase 4 items through live enrichment validation and schema embedding generation.
+- **Pending next:** store schema embeddings in DuckDB VSS or the Phase 0 vector-store alternative.
+- **Resume point:** resolve the deferred Phase 0 vector-store decision, record it in an ADR, and implement the sixth Phase 4 checklist item with deterministic replacement and dimension checks.
 - **Last updated:** 2026-06-21
 
 ---
@@ -76,7 +76,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 - [x] Merge optional enrichment metadata with introspected names, types, and safe sample summaries
 - [x] Provide a command that drafts descriptions from schema metadata; require human review before activation
 - [x] Validate enrichment against the live schema and report stale or unknown table/column references
-- [ ] Generate embeddings for enriched descriptions, raw identifiers, and safe sample summaries
+- [x] Generate embeddings for enriched descriptions, raw identifiers, and safe sample summaries
 - [ ] Store embeddings in DuckDB VSS (or pgvector, per Phase 0 decision)
 - [ ] Implement cosine-similarity retrieval: question → top-k relevant tables/columns
 - [ ] Replace "full schema in prompt" with "retrieved schema in prompt" in the pipeline from Phase 2
