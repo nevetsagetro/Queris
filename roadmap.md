@@ -7,9 +7,9 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 2 — Baseline Text-to-SQL (`[~]`)
-- **Latest checkpoint:** the baseline pipeline introspects the live schema, generates SQL, validates it before execution, and returns structured results from a read-only connection.
-- **Current task:** define and run the ~10 hand-picked Phase 2 baseline questions.
-- **Resume point:** add a versioned baseline question set and a repeatable evaluation process; run it with `OPENAI_API_KEY` when credentials are available, then record accuracy without committing generated data or secrets.
+- **Latest checkpoint:** the versioned 10-question set, typed scorer, JSONL audit logging, CLI, offline reference verification, and reusable evaluation skill are implemented.
+- **Current task:** run the live 10-question baseline; `OPENAI_API_KEY` was unavailable at the latest checkpoint.
+- **Resume point:** invoke `$queris-run-baseline-eval` with credentials supplied through the environment, require at least 7/10 correct results, and record the verified model and score without committing local results or secrets.
 - **Last updated:** 2026-06-21
 
 ---
@@ -50,7 +50,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 - [x] Prompt template: full schema + user question → SQL string
 - [x] Pass every generated statement through the Phase 1 validator before execution
 - [ ] Manually test against ~10 hand-picked questions
-- [ ] Log every (question, generated SQL, result) triple to a local file
+- [x] Log every (question, generated SQL, result) triple to a local file
 
 **Exit criteria:** at least 7/10 hand-picked questions return correct results, end-to-end, with full schema in the prompt.
 
