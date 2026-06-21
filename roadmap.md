@@ -9,8 +9,8 @@ This is the source of truth for pending decisions, delivery order, and progress.
 - **Active stage:** Phase 4 — Schema Enrichment + RAG (`[~]`)
 - **Latest checkpoint:** measured the 10 wide-schema labels at `k=5`; enrichment improved macro precision from 0.14 to 0.20 and recall from 0.70 to 1.00.
 - **Completed work:** completed Phase 3 and all Phase 4 implementation, including deterministic offline retrieval comparison.
-- **Pending next:** review and merge the stacked Phase 4 branches before transitioning to Phase 5.
-- **Resume point:** open `feat/enrichment-retrieval-eval` against `feat/wide-schema-fixture`, then merge the Phase 4 stack before selecting the Phase 5 orchestrator.
+- **Pending next:** restore GitHub SSH authentication, then push, review, and merge the stacked Phase 4 branches before transitioning to Phase 5.
+- **Resume point:** push `feat/enrichment-retrieval-eval`, open it against `feat/wide-schema-fixture`, then merge the Phase 4 stack before selecting the Phase 5 orchestrator.
 - **Last updated:** 2026-06-21
 
 ---
