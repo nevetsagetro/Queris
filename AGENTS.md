@@ -4,6 +4,8 @@
 
 Queris has completed its safe DuckDB core and schema introspection. `README.md` defines scope and security boundaries; the `roadmap.md` Current focus block owns the active stage and resume point. Read that block first and update it when focus changes.
 
+In a fresh session, invoke `$queris-resume-work` to recover context and follow the branch, validation, commit, and checkpoint workflow.
+
 Production code lives under `src/queris/` and tests mirror it in `tests/`. Keep database access, sample setup, schema inspection, SQL validation, and future evaluation concerns in focused modules. Store accepted decisions in `docs/adr/`. Generated databases and credentials never belong in Git.
 
 ## Build, Test, and Development Commands
