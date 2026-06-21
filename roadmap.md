@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 4 — Schema Enrichment + RAG (`[~]`)
-- **Latest checkpoint:** integrated retrieved matches into the text-to-SQL pipeline as minimal live `DatabaseSchema` context while preserving an explicit full-schema Phase 2 evaluation baseline.
-- **Completed work:** completed Phase 3 and the first eight Phase 4 items through enrichment, embedding, vector storage, retrieval, and retrieved-schema prompting.
-- **Pending next:** add a synthetic wide schema with 30+ tables and ambiguous identifiers.
-- **Resume point:** implement the ninth Phase 4 checklist item in `roadmap.md`; create a deterministic wide-schema fixture with hand-labeled ambiguous fields and tests covering at least 30 tables without committing generated databases.
+- **Latest checkpoint:** added a generated 32-table schema that reuses `amt`, `qty`, and `flg_x`, with reviewed enrichment and 10 versioned question-to-column labels.
+- **Completed work:** completed Phase 3 and the first nine Phase 4 items through the deterministic ambiguous-schema evaluation fixture.
+- **Pending next:** compare retrieval quality with and without enrichment to quantify its contribution.
+- **Resume point:** implement the final Phase 4 checklist item in `roadmap.md`; add offline deterministic embeddings for repeatable tests, measure precision/recall at fixed k against the 10 labels, and document the enriched-versus-raw result.
 - **Last updated:** 2026-06-21
 
 ---
@@ -80,7 +80,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 - [x] Store embeddings in DuckDB VSS (ADR 0006)
 - [x] Implement cosine-similarity retrieval: question → top-k relevant tables/columns
 - [x] Replace "full schema in prompt" with "retrieved schema in prompt" in the pipeline from Phase 2
-- [ ] Add a synthetic wide schema (30+ tables) with ambiguous identifiers such as `amt`, `qty`, and `flg_x`
+- [x] Add a synthetic wide schema (30+ tables) with ambiguous identifiers such as `amt`, `qty`, and `flg_x`
 - [ ] Compare retrieval quality with and without enrichment to quantify its contribution
 
 **Exit criteria:** retrieval precision/recall is measured against hand-labeled question-to-column pairs, and enrichment produces a documented improvement on the ambiguous-schema fixture.
