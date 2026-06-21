@@ -1,8 +1,8 @@
 # Queris: Evaluated Text-to-SQL Analytics Agent
 
-## Initial status
+## Current status
 
-🚧 **Phase 0 is in progress.** The Python package and quality tooling are scaffolded, but no functional pipeline, endpoints, datasets, or integrations exist yet. See the [`roadmap.md`](roadmap.md#current-focus) resume point for the active task and pending decisions.
+🚧 **Phase 1 is complete.** Queris can generate a deterministic retail DuckDB database, reopen it read-only, validate query-only SQL, and emit structured schema JSON. No LLM pipeline, API, or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the next decision and exact resume point.
 
 ## Product vision
 

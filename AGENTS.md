@@ -2,9 +2,9 @@
 
 ## Project Structure & Module Organization
 
-Queris is in Phase 0 with package and quality-tool scaffolding only. `README.md` defines product scope and security boundaries; the `roadmap.md` Current focus block owns the active stage and resume point. Read that block first, update it when focus changes, and do not duplicate specifications across documents.
+Queris has completed its safe DuckDB core and schema introspection. `README.md` defines scope and security boundaries; the `roadmap.md` Current focus block owns the active stage and resume point. Read that block first and update it when focus changes.
 
-When introducing the Python MVP, keep production code under `src/queris/` and mirror it in `tests/`. Separate API, schema retrieval, SQL validation, execution, and evaluation concerns into focused modules. Put sample data in `data/` only when its license and provenance are documented; keep generated databases and credentials out of Git. Record significant architectural choices in `docs/adr/`.
+Production code lives under `src/queris/` and tests mirror it in `tests/`. Keep database access, sample setup, schema inspection, SQL validation, and future evaluation concerns in focused modules. Store accepted decisions in `docs/adr/`. Generated databases and credentials never belong in Git.
 
 ## Build, Test, and Development Commands
 
@@ -14,20 +14,22 @@ Create a virtual environment and install the package with development tools usin
 - `python -m ruff check .`: check Python style and common defects.
 - `python -m ruff format --check .`: verify formatting.
 - `pre-commit run --all-files`: run repository checks before proposing a commit.
+- `queris-sample-data data/retail.duckdb`: create the local deterministic fixture.
+- `queris-schema data/retail.duckdb --samples 3`: print structured schema JSON.
 
 ## Coding Style & Naming Conventions
 
-For Python, use four-space indentation, type annotations, and concise docstrings for public interfaces. Name modules, functions, and variables with `snake_case`; classes with `PascalCase`; constants with `UPPER_SNAKE_CASE`. Keep functions small and use Pydantic models at API boundaries. Follow accepted ADRs and update roadmap checkboxes in the same change that completes them.
+Use four-space indentation, type annotations, and concise public-interface docstrings. Use `snake_case` for modules/functions, `PascalCase` for classes, and `UPPER_SNAKE_CASE` for constants. Keep functions small and use Pydantic at structured boundaries. Update roadmap checkboxes with completed work.
 
 ## Testing Guidelines
 
-Use `pytest` when the test infrastructure is introduced. Name files `test_<module>.py` and tests `test_<behavior>`. Every SQL execution change must cover allowed read-only queries and rejected `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, and `CREATE` statements. Include prompt-injection, ambiguous-input, retry-limit, and audit-log cases where relevant. Evaluation fixtures should remain deterministic and versioned.
+Use `pytest`; name files `test_<module>.py` and tests `test_<behavior>`. SQL execution changes must cover allowed queries and rejected mutations. Add prompt-injection, ambiguity, retry, and audit cases where relevant. Keep fixtures deterministic.
 
 Version and review schema-enrichment metadata before indexing. Test stale references and retrieval with ambiguous identifiers.
 
 ## Commit & Pull Request Guidelines
 
-Follow `CONTRIBUTING.md`: branch from updated `main`, use a typed kebab-case branch name, and write Conventional Commit subjects such as `feat(sql): reject stacked statements`. Keep each commit focused and include its tests or documentation. Pull requests must explain the problem, implementation, and verification; call out schema, dependency, configuration, and security-boundary changes explicitly.
+Follow `CONTRIBUTING.md`: branch from updated `main`, use typed kebab-case names, and write Conventional Commit subjects such as `feat(sql): reject stacked statements`. Keep commits focused. Pull requests explain the problem, implementation, verification, and security-impacting changes.
 
 ## Security & Configuration
 

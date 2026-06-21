@@ -6,10 +6,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 ## Current focus
 
-- **Active stage:** Phase 0 — Decisions & Scaffolding (`[~]`)
-- **Latest checkpoint:** package tooling is verified; the Phase 1 read-only SQL parser and its initial policy tests are implemented.
-- **Current task:** select and document the sample dataset, then implement safe DuckDB loading and schema introspection.
-- **Resume point:** resolve the orchestrator, vector store, LLM provider, and sample dataset choices; record accepted choices in ADRs.
+- **Active stage:** Decision checkpoint before Phase 2 (`[~]`)
+- **Latest checkpoint:** the deterministic retail fixture, read-only runtime connection, schema models, JSON CLI, and safety tests are verified.
+- **Current task:** select the LLM provider and credential strategy required for the Phase 2 baseline.
+- **Resume point:** record the LLM decision as ADR 0002; orchestrator and vector-store choices can remain deferred until Phases 5 and 4 respectively.
 - **Last updated:** 2026-06-21
 
 ---
@@ -17,10 +17,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Phase 0 — Decisions & Scaffolding
 **Goal:** resolve the blocking technical choices so Phase 1 can start unambiguously.
 
-- [ ] Pick agent orchestrator: LangChain vs smolagents
-- [ ] Pick vector store: DuckDB VSS vs pgvector
+- [ ] Pick agent orchestrator: LangChain vs smolagents (deferred until Phase 5)
+- [ ] Pick vector store: DuckDB VSS vs pgvector (deferred until Phase 4)
 - [ ] Pick LLM provider(s) and credential management approach
-- [ ] Choose sample dataset (recommendation: a public retail/e-commerce dataset with categories, regions, margins — matches the example question in the README)
+- [x] Choose a deterministic synthetic retail dataset (ADR 0001)
 - [x] Confirm the initial layout (`src/queris/`, `tests/`, `evals/`, `data/`, and an optional `frontend/`)
 - [x] Set up `pyproject.toml`, linting, tests, and pre-commit
 - [x] Document branch, commit, and pull-request conventions
@@ -32,13 +32,13 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Phase 1 — Safe DuckDB Core + Schema Introspection
 **Goal:** establish safe database access and structured schema inspection before adding an LLM.
 
-- [ ] Load sample dataset into a local DuckDB file
+- [x] Load sample dataset into a local DuckDB file
 - [x] Implement SQLGlot parsing and an explicit read-only statement whitelist
 - [x] Reject multi-statement queries before execution
-- [ ] Open execution connections with `read_only=True` as defense in depth
-- [ ] Write a schema-introspection function (tables, columns, types, sample values)
+- [x] Open execution connections with `read_only=True` as defense in depth
+- [x] Write a schema-introspection function (tables, columns, types, sample values)
 - [x] Unit tests for the initial allowed/forbidden SQL policy
-- [ ] Unit tests for schema introspection against the selected dataset
+- [x] Unit tests for schema introspection against the selected dataset
 
 **Exit criteria:** one command prints a structured JSON schema; all mutation and stacked-statement fixtures are blocked before DuckDB execution.
 
