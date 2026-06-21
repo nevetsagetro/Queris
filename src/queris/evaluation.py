@@ -11,7 +11,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from queris.generation import GeminiSQLGenerator
-from queris.pipeline import QueryResult, SQLGenerator, run_text_to_sql
+from queris.pipeline import FullSchemaSelector, QueryResult, SQLGenerator, run_text_to_sql
 from queris.schema import DatabaseSchema
 
 BASELINE_PASS_COUNT = 7
@@ -92,6 +92,7 @@ def run_evaluation(
                 database_path,
                 case.question,
                 recording_generator,
+                FullSchemaSelector(),
                 sample_limit=sample_limit,
             )
         except Exception as error:
