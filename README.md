@@ -2,7 +2,7 @@
 
 ## Current status
 
-🚧 **Phase 4 is in progress.** Queris can generate a deterministic retail DuckDB database, introspect its full schema, request SQL through a replaceable Gemini adapter, validate every generated statement, execute allowed queries on a read-only connection, and score a versioned 10-question baseline with local JSONL audit records. Phase 3 blocks the complete adversarial SQL corpus before adapter execution. Reviewed schema enrichment is validated against live references, embedded into a separate DuckDB VSS index, retrieved by cosine similarity, and reduced to live schema context before SQL generation. `queris-enrichment-draft` emits inactive YAML for human review. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+🚧 **Phase 4 is in progress.** Queris can generate deterministic retail and 32-table ambiguous DuckDB fixtures, introspect schemas, request SQL through a replaceable Gemini adapter, validate every statement, execute allowed queries read-only, and score a versioned baseline. Phase 3 blocks the adversarial SQL corpus before adapter execution. Reviewed schema enrichment is validated against live references, embedded into a separate DuckDB VSS index, retrieved by cosine similarity, and reduced to live schema context before SQL generation. The wide fixture includes reviewed metadata and hand-labeled retrieval questions for measuring enrichment quality. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 
