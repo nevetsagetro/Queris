@@ -1,10 +1,12 @@
 from pathlib import Path
+from typing import Self
 
 import duckdb
 import pytest
 
-from queris.database import read_only_connection
+from queris.database import execute_read_only, read_only_connection
 from queris.sample_data import create_sample_database
+from queris.sql_validation import SQLValidationError
 
 
 def test_create_sample_database_loads_expected_rows(sample_database: Path) -> None:
@@ -34,3 +36,30 @@ def test_read_only_connection_requires_existing_file(tmp_path: Path) -> None:
         read_only_connection(tmp_path / "missing.duckdb"),
     ):
         pass
+
+
+class RecordingConnection:
+    def __init__(self) -> None:
+        self.executed_sql: list[str] = []
+
+    def execute(self, sql: str) -> Self:
+        self.executed_sql.append(sql)
+        return self
+
+
+def test_execute_read_only_validates_before_execution() -> None:
+    connection = RecordingConnection()
+
+    with pytest.raises(SQLValidationError, match="Only read-only"):
+        execute_read_only(connection, "DROP TABLE orders")
+
+    assert connection.executed_sql == []
+
+
+def test_execute_read_only_sends_validated_query_to_connection() -> None:
+    connection = RecordingConnection()
+
+    result = execute_read_only(connection, "SELECT 1")
+
+    assert result is connection
+    assert connection.executed_sql == ["SELECT 1"]
