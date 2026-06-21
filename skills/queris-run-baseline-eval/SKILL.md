@@ -9,8 +9,8 @@ description: Run and record the Queris Phase 2 text-to-SQL baseline against its 
 
 1. Work from the Queris repository and read the `roadmap.md` Current focus block.
 2. Confirm `evals/baseline_questions.json` contains the reviewed versioned cases.
-3. Confirm `OPENAI_API_KEY` is present in the process environment without printing its value. Never place it in repository files, CLI arguments, logs, or shell history.
-4. Use `OPENAI_MODEL` only when intentionally overriding the ADR 0002 baseline model.
+3. Confirm `GEMINI_API_KEY` is present in the process environment without printing its value. Never place it in repository files, CLI arguments, logs, or shell history.
+4. Use `GEMINI_MODEL` only when intentionally overriding the ADR 0003 baseline model.
 5. Create `data/retail.duckdb` with `queris-sample-data` only when it does not exist. Treat fixture creation as trusted setup, separate from the read-only evaluation runtime.
 
 ## Run
