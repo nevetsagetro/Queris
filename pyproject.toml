@@ -13,6 +13,7 @@ authors = [{ name = "Steven Ortega" }]
 dependencies = [
   "duckdb>=1.0",
   "google-genai>=1.0",
+  "langgraph>=1.2,<2.0",
   "pydantic>=2.0",
   "PyYAML>=6.0",
   "sqlglot>=25.0",
