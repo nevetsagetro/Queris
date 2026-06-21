@@ -6,7 +6,7 @@ Queris has completed its safe DuckDB core and schema introspection. `README.md` 
 
 In a fresh session, invoke `$queris-resume-work` to recover context and follow the branch, validation, commit, and checkpoint workflow.
 
-Invoke `$queris-run-baseline-eval` when running or recording the versioned Phase 2 text-to-SQL baseline.
+Invoke `$queris-run-baseline-eval` when rerunning or recording the versioned text-to-SQL baseline, or when investigating a live evaluation failure.
 
 When introducing or materially changing a repeatable multi-step repository process, create or update a focused skill under `skills/` and reference it from this file when contributors should invoke it. Keep one-off implementation details in the task or code instead of turning them into skills.
 
@@ -30,7 +30,7 @@ Use four-space indentation, type annotations, and concise public-interface docst
 
 ## Testing Guidelines
 
-Use `pytest`; name files `test_<module>.py` and tests `test_<behavior>`. SQL execution changes must cover allowed queries and rejected mutations. Add prompt-injection, ambiguity, retry, and audit cases where relevant. Keep fixtures deterministic.
+Use `pytest`; name files `test_<module>.py` and tests `test_<behavior>`. SQL execution changes must cover allowed queries and rejected mutations. Add prompt-injection, ambiguity, retry, and audit cases where relevant. Keep fixtures deterministic. When Phase 3 work updates the SQL policy, keep the roadmap's current focus aligned with the live validation state.
 
 Version and review schema-enrichment metadata before indexing. Test stale references and retrieval with ambiguous identifiers.
 

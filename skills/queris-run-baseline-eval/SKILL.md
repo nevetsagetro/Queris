@@ -1,6 +1,6 @@
 ---
 name: queris-run-baseline-eval
-description: Run and record the Queris Phase 2 text-to-SQL baseline against its versioned retail questions. Use when executing or repeating the 10-question baseline, checking the 7/10 exit threshold, producing local JSONL audit results, investigating an evaluation failure, or updating the roadmap after a verified baseline run.
+description: Run and record the Queris versioned text-to-SQL baseline against the retail questions. Use when executing or repeating the 10-question baseline, checking the 7/10 exit threshold, producing local JSONL audit results, investigating an evaluation failure, or updating the roadmap after a verified baseline run.
 ---
 
 # Run Queris Baseline Evaluation

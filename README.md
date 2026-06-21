@@ -2,7 +2,7 @@
 
 ## Current status
 
-🚧 **Phase 3 is in progress.** Queris can generate a deterministic retail DuckDB database, introspect its full schema, request SQL through a replaceable Gemini adapter, validate every generated statement, execute allowed queries on a read-only connection, and score a versioned 10-question baseline with local JSONL audit records. The live Gemini baseline cleared the 7/10 threshold and Phase 2 is now closed at the roadmap checkpoint. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+🚧 **Phase 3 is in progress.** Queris can generate a deterministic retail DuckDB database, introspect its full schema, request SQL through a replaceable Gemini adapter, validate every generated statement, execute allowed queries on a read-only connection, and score a versioned 10-question baseline with local JSONL audit records. The live Gemini baseline cleared the 7/10 threshold and Phase 2 is now closed at the roadmap checkpoint. The next work is Phase 3 safety hardening: forbidden-node coverage, bypass tests, and adapter enforcement. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 
