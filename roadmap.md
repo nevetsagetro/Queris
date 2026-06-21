@@ -6,11 +6,11 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 ## Current focus
 
-- **Active stage:** Phase 4 — Schema Enrichment + RAG (`[ ]`)
-- **Latest checkpoint:** Phase 3 hardened the SQLGlot policy with an explicit `SELECT`/`WITH` whitelist, forbidden AST nodes and external-data functions, and a shared malicious-query corpus blocked before adapter execution.
-- **Completed work:** closed the baseline at `7/10`, then covered mutation, `ATTACH`, `COPY`, pragmas, extension operations, filesystem functions, and casing/comment/nesting bypass attempts while preserving legitimate query text unchanged.
-- **Pending next:** define and version the reviewed YAML schema-enrichment format before implementing indexing or retrieval.
-- **Resume point:** start with the first Phase 4 checklist item in `roadmap.md`; define metadata for table/column descriptions, business terms, units, and aliases, then record any architectural choice in an ADR.
+- **Active stage:** Phase 4 — Schema Enrichment + RAG (`[~]`)
+- **Latest checkpoint:** defined schema-enrichment format version 1 with strict Pydantic validation, safe YAML loading, explicit review state, and reviewed retail metadata; ADR 0004 records the contract.
+- **Completed work:** completed Phase 3 and the first Phase 4 item covering versioned table/column descriptions, business terms, aliases, and units.
+- **Pending next:** merge optional enrichment metadata with introspected names, types, and bounded sample summaries.
+- **Resume point:** implement the second Phase 4 checklist item in `roadmap.md`; keep unreviewed or stale metadata out of active enriched schemas and add merge tests for partial metadata.
 - **Last updated:** 2026-06-21
 
 ---
@@ -72,7 +72,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Phase 4 — Schema Enrichment + RAG
 **Goal:** make ambiguous schemas understandable, then retrieve only the relevant tables and columns instead of sending the full schema.
 
-- [ ] Define a versioned YAML format for table and column descriptions, business terms, units, and aliases
+- [x] Define a versioned YAML format for table and column descriptions, business terms, units, and aliases
 - [ ] Merge optional enrichment metadata with introspected names, types, and safe sample summaries
 - [ ] Provide a command that drafts descriptions from schema metadata; require human review before activation
 - [ ] Validate enrichment against the live schema and report stale or unknown table/column references
