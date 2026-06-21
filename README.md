@@ -2,7 +2,7 @@
 
 ## Current status
 
-🚧 **Phase 5 is in progress.** Queris can generate deterministic retail and 32-table ambiguous DuckDB fixtures, introspect schemas, request SQL through a replaceable Gemini adapter, validate every statement, execute allowed queries read-only, and score versioned generation and retrieval evaluations. The typed LangGraph state machine now makes one bounded correction attempt using validation or DuckDB diagnostics as untrusted prompt data. A configurable retry cap is the next step. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+🚧 **Phase 5 is in progress.** Queris can generate deterministic retail and 32-table ambiguous DuckDB fixtures, introspect schemas, request SQL through a replaceable Gemini adapter, validate every statement, execute allowed queries read-only, and score versioned generation and retrieval evaluations. The typed LangGraph state machine retries failed SQL with a configurable cap (default 3) and returns a graceful exhaustion result. Structured retry-count output is the next step. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 

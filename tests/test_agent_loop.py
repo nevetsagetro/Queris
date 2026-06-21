@@ -4,7 +4,7 @@ import duckdb
 import pytest
 
 import queris.agent_loop as agent_loop
-from queris.agent_loop import run_agent_loop
+from queris.agent_loop import DEFAULT_MAX_RETRIES, MAX_RETRIES, run_agent_loop
 from queris.generation import SQLCorrectionContext
 from queris.pipeline import FullSchemaSelector
 from queris.schema import DatabaseSchema
@@ -44,6 +44,8 @@ def test_agent_loop_returns_typed_success(sample_database: Path) -> None:
     assert result.rows == ((4,),)
     assert result.failure_stage is None
     assert result.error is None
+    assert result.retries_exhausted is False
+    assert result.explanation is None
     assert generator.calls[0][1] == result.question
     assert generator.calls[0][2] is None
 
@@ -70,8 +72,10 @@ def test_agent_loop_stops_unsafe_sql_before_execution(
     assert result.error is not None
     assert result.rows == ()
     assert len(result.sql) > 0
-    assert len(generator.calls) == 2
-    assert generator.calls[1][2] is not None
+    assert len(generator.calls) == DEFAULT_MAX_RETRIES + 1
+    assert all(call[2] is not None for call in generator.calls[1:])
+    assert result.retries_exhausted is True
+    assert result.explanation == "Could not produce executable read-only SQL after 4 attempts."
 
 
 def test_agent_loop_returns_execution_failure_for_invalid_query(
@@ -91,8 +95,10 @@ def test_agent_loop_returns_execution_failure_for_invalid_query(
     assert result.error is not None
     assert "missing_table" in result.error
     assert result.rows == ()
-    assert len(generator.calls) == 2
-    assert generator.calls[1][2] is not None
+    assert len(generator.calls) == DEFAULT_MAX_RETRIES + 1
+    assert all(call[2] is not None for call in generator.calls[1:])
+    assert result.retries_exhausted is True
+    assert result.explanation == "Could not produce executable read-only SQL after 4 attempts."
 
 
 def test_agent_loop_corrects_validation_failure_before_execution(
@@ -149,6 +155,78 @@ def test_agent_loop_corrects_execution_failure(sample_database: Path) -> None:
     assert correction.previous_sql == "SELECT COUNT(*) FROM missing_table"
     assert correction.failure_stage == "execution"
     assert "missing_table" in correction.error
+
+
+def test_agent_loop_uses_configured_retry_cap(sample_database: Path) -> None:
+    generator = FakeGenerator(
+        "SELECT COUNT(*) FROM missing_one",
+        "SELECT COUNT(*) FROM missing_two",
+        "SELECT COUNT(*) FROM orders",
+    )
+
+    result = run_agent_loop(
+        sample_database,
+        "How many orders are there?",
+        generator,
+        FullSchemaSelector(),
+        max_retries=2,
+    )
+
+    assert result.status == "success"
+    assert result.rows == ((4,),)
+    assert len(generator.calls) == 3
+
+
+def test_agent_loop_can_disable_retries(sample_database: Path) -> None:
+    generator = FakeGenerator("SELECT COUNT(*) FROM missing_table")
+
+    result = run_agent_loop(
+        sample_database,
+        "How many orders are there?",
+        generator,
+        FullSchemaSelector(),
+        max_retries=0,
+    )
+
+    assert result.status == "failure"
+    assert result.retries_exhausted is True
+    assert result.explanation == "Could not produce executable read-only SQL after 1 attempt."
+    assert len(generator.calls) == 1
+
+
+def test_agent_loop_supports_maximum_retry_cap(sample_database: Path) -> None:
+    generator = FakeGenerator("DROP TABLE orders")
+
+    result = run_agent_loop(
+        sample_database,
+        "Delete all orders",
+        generator,
+        FullSchemaSelector(),
+        max_retries=MAX_RETRIES,
+    )
+
+    assert result.status == "failure"
+    assert result.retries_exhausted is True
+    assert len(generator.calls) == MAX_RETRIES + 1
+
+
+@pytest.mark.parametrize("max_retries", [-1, MAX_RETRIES + 1, 1.5, True])
+def test_agent_loop_rejects_invalid_retry_cap_before_generation(
+    sample_database: Path,
+    max_retries: object,
+) -> None:
+    generator = FakeGenerator("SELECT 1")
+
+    with pytest.raises(ValueError, match="max_retries"):
+        run_agent_loop(
+            sample_database,
+            "Return one",
+            generator,
+            FullSchemaSelector(),
+            max_retries=max_retries,  # type: ignore[arg-type]
+        )
+
+    assert generator.calls == []
 
 
 def test_agent_loop_executes_through_validating_adapter(
