@@ -11,6 +11,8 @@ Create every change from an updated `main`; do not commit directly to `main`. Us
 
 Keep a branch focused on one deliverable. Rebase it on `origin/main` before opening a pull request; do not merge `main` into the branch solely to synchronize it.
 
+When a roadmap checkpoint advances to the next item, phase, or stage, push the completed branch and verify its remote contains the checkpoint commit before creating the next branch. Treat a push failure as a blocked transition; do not continue new roadmap work only from an unpushed local checkpoint.
+
 ## Commits
 
 Use Conventional Commit subjects in imperative form:

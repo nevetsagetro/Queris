@@ -4,7 +4,7 @@
 
 Queris has completed its safe DuckDB core and schema introspection. `README.md` defines scope and security boundaries; the `roadmap.md` Current focus block owns the active stage and resume point. Read that block first and update it when focus changes.
 
-In a fresh session, invoke `$queris-resume-work` to recover context and follow the branch, validation, commit, and checkpoint workflow.
+In a fresh session, invoke `$queris-resume-work` to recover context and follow the branch, validation, commit, push-before-transition, and checkpoint workflow.
 
 Invoke `$queris-run-baseline-eval` when rerunning or recording the versioned text-to-SQL baseline, or when investigating a live evaluation failure.
 
