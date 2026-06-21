@@ -1,0 +1,26 @@
+# Python caches and build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# Virtual environments and local configuration
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Local data and generated reports
+*.db
+*.duckdb
+data/raw/
+evals/results/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
