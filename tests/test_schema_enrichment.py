@@ -3,9 +3,54 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from queris.schema_enrichment import load_schema_enrichment
+from queris.schema import ColumnSchema, DatabaseSchema, TableSchema
+from queris.schema_enrichment import (
+    SchemaEnrichment,
+    load_schema_enrichment,
+    merge_schema_enrichment,
+)
 
 RETAIL_ENRICHMENT_PATH = Path("metadata/retail.v1.yaml")
+
+
+def _schema() -> DatabaseSchema:
+    return DatabaseSchema(
+        tables=(
+            TableSchema(
+                schema_name="main",
+                name="orders",
+                columns=(
+                    ColumnSchema(
+                        name="order_id",
+                        data_type="INTEGER",
+                        nullable=False,
+                        ordinal_position=1,
+                        sample_values=(1, 2),
+                    ),
+                    ColumnSchema(
+                        name="order_date",
+                        data_type="DATE",
+                        nullable=False,
+                        ordinal_position=2,
+                        sample_values=("2026-01-01",),
+                    ),
+                ),
+            ),
+            TableSchema(
+                schema_name="main",
+                name="regions",
+                columns=(
+                    ColumnSchema(
+                        name="name",
+                        data_type="VARCHAR",
+                        nullable=False,
+                        ordinal_position=1,
+                        sample_values=("North",),
+                    ),
+                ),
+            ),
+        )
+    )
 
 
 def test_load_schema_enrichment_reads_reviewed_versioned_metadata() -> None:
@@ -132,3 +177,88 @@ def test_load_schema_enrichment_hides_yaml_parser_details(tmp_path: Path) -> Non
 
     with pytest.raises(ValueError, match="could not be parsed"):
         load_schema_enrichment(path)
+
+
+def test_merge_schema_enrichment_preserves_introspection_for_partial_metadata() -> None:
+    schema = _schema()
+    enrichment = SchemaEnrichment.model_validate(
+        {
+            "version": 1,
+            "reviewed": True,
+            "tables": [
+                {
+                    "schema_name": "main",
+                    "name": "orders",
+                    "description": "Customer orders.",
+                    "aliases": ["sales orders"],
+                    "columns": [
+                        {
+                            "name": "order_date",
+                            "description": "Date the order was placed.",
+                            "unit": "date",
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    merged = merge_schema_enrichment(schema, enrichment)
+
+    orders = merged.tables[0]
+    assert orders.description == "Customer orders."
+    assert orders.aliases == ("sales orders",)
+    assert orders.columns[0] is schema.tables[0].columns[0]
+    assert orders.columns[1].description == "Date the order was placed."
+    assert orders.columns[1].unit == "date"
+    assert orders.columns[1].data_type == "DATE"
+    assert orders.columns[1].sample_values == ("2026-01-01",)
+    assert merged.tables[1] is schema.tables[1]
+
+
+@pytest.mark.parametrize(
+    "document",
+    [
+        {
+            "version": 1,
+            "reviewed": False,
+            "tables": [
+                {
+                    "schema_name": "main",
+                    "name": "orders",
+                    "description": "Unreviewed text.",
+                }
+            ],
+        },
+        {
+            "version": 1,
+            "reviewed": True,
+            "tables": [
+                {
+                    "schema_name": "main",
+                    "name": "missing_orders",
+                    "description": "Stale table.",
+                }
+            ],
+        },
+        {
+            "version": 1,
+            "reviewed": True,
+            "tables": [
+                {
+                    "schema_name": "main",
+                    "name": "orders",
+                    "columns": [{"name": "missing_date", "description": "Stale column."}],
+                }
+            ],
+        },
+    ],
+)
+def test_merge_schema_enrichment_does_not_activate_unreviewed_or_stale_metadata(
+    document: dict[str, object],
+) -> None:
+    schema = _schema()
+
+    merged = merge_schema_enrichment(schema, SchemaEnrichment.model_validate(document))
+
+    assert merged is schema

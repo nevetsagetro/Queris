@@ -22,6 +22,10 @@ class ColumnSchema(BaseModel):
     nullable: bool
     ordinal_position: int
     sample_values: tuple[Any, ...] = Field(default_factory=tuple)
+    description: str | None = None
+    business_terms: tuple[str, ...] = ()
+    aliases: tuple[str, ...] = ()
+    unit: str | None = None
 
 
 class TableSchema(BaseModel):
@@ -32,6 +36,9 @@ class TableSchema(BaseModel):
     schema_name: str
     name: str
     columns: tuple[ColumnSchema, ...]
+    description: str | None = None
+    business_terms: tuple[str, ...] = ()
+    aliases: tuple[str, ...] = ()
 
 
 class DatabaseSchema(BaseModel):

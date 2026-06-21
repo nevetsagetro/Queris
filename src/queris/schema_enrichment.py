@@ -14,6 +14,8 @@ from pydantic import (
     model_validator,
 )
 
+from queris.schema import ColumnSchema, DatabaseSchema, TableSchema
+
 CleanString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
@@ -104,6 +106,73 @@ def load_schema_enrichment(path: str | Path) -> SchemaEnrichment:
     except yaml.YAMLError as error:
         raise ValueError("schema enrichment YAML could not be parsed") from error
     return SchemaEnrichment.model_validate(raw_enrichment)
+
+
+def merge_schema_enrichment(
+    schema: DatabaseSchema,
+    enrichment: SchemaEnrichment | None,
+) -> DatabaseSchema:
+    """Merge reviewed, current semantic metadata into an introspected schema."""
+    if enrichment is None or not enrichment.reviewed:
+        return schema
+
+    tables_by_reference = {(table.schema_name, table.name): table for table in schema.tables}
+    for table_metadata in enrichment.tables:
+        table = tables_by_reference.get((table_metadata.schema_name, table_metadata.name))
+        if table is None:
+            return schema
+        column_names = {column.name for column in table.columns}
+        if any(column.name not in column_names for column in table_metadata.columns):
+            return schema
+
+    enrichment_by_reference = {
+        (table.schema_name, table.name): table for table in enrichment.tables
+    }
+    return DatabaseSchema(
+        tables=tuple(
+            _merge_table(
+                table,
+                enrichment_by_reference.get((table.schema_name, table.name)),
+            )
+            for table in schema.tables
+        )
+    )
+
+
+def _merge_table(
+    table: TableSchema,
+    metadata: TableEnrichment | None,
+) -> TableSchema:
+    if metadata is None:
+        return table
+
+    columns_by_name = {column.name: column for column in metadata.columns}
+    return table.model_copy(
+        update={
+            "description": metadata.description,
+            "business_terms": metadata.business_terms,
+            "aliases": metadata.aliases,
+            "columns": tuple(
+                _merge_column(column, columns_by_name.get(column.name)) for column in table.columns
+            ),
+        }
+    )
+
+
+def _merge_column(
+    column: ColumnSchema,
+    metadata: ColumnEnrichment | None,
+) -> ColumnSchema:
+    if metadata is None:
+        return column
+    return column.model_copy(
+        update={
+            "description": metadata.description,
+            "business_terms": metadata.business_terms,
+            "aliases": metadata.aliases,
+            "unit": metadata.unit,
+        }
+    )
 
 
 def _require_unique_references(references: Iterable[str], label: str) -> None:
