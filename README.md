@@ -2,7 +2,7 @@
 
 ## Current status
 
-🚧 **Phase 4 is in progress.** Queris can generate deterministic retail and 32-table ambiguous DuckDB fixtures, introspect schemas, request SQL through a replaceable Gemini adapter, validate every statement, execute allowed queries read-only, and score a versioned baseline. Phase 3 blocks the adversarial SQL corpus before adapter execution. Reviewed schema enrichment is validated against live references, embedded into a separate DuckDB VSS index, retrieved by cosine similarity, and reduced to live schema context before SQL generation. The wide fixture includes reviewed metadata and hand-labeled retrieval questions for measuring enrichment quality. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+🚧 **Phase 4 implementation is complete pending review and merge.** Queris can generate deterministic retail and 32-table ambiguous DuckDB fixtures, introspect schemas, request SQL through a replaceable Gemini adapter, validate every statement, execute allowed queries read-only, and score versioned generation and retrieval evaluations. Phase 3 blocks the adversarial SQL corpus before adapter execution. Reviewed schema enrichment is validated against live references, embedded into a separate DuckDB VSS index, retrieved by cosine similarity, and reduced to live schema context before SQL generation. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 
@@ -51,3 +51,22 @@ These constraints apply to the first implementation and cannot be deferred to a 
 - [`AGENTS.md`](AGENTS.md): repository layout, contribution conventions, and verification expectations.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md): branch, commit, and pull-request workflow.
 - Architectural decisions, once accepted, should be recorded as ADRs under `docs/adr/`.
+
+## Retrieval evaluation
+
+The versioned wide-schema evaluation uses a deterministic offline token-hash embedder so tests do
+not depend on credentials, network access, or provider model changes. At `k=5`, the 10 reviewed
+question-to-column labels produce these macro metrics:
+
+| Schema documents | Precision@5 | Recall@5 |
+|---|---:|---:|
+| Raw identifiers | 0.14 | 0.70 |
+| Reviewed enrichment | 0.20 | 1.00 |
+
+The enriched documents recover all three relevant columns missed by raw identifiers. Reproduce the
+comparison after creating the wide fixture:
+
+```bash
+queris-retrieval-eval data/wide.duckdb metadata/wide-schema.v1.yaml \
+  evals/wide_schema_retrieval.json --top-k 5
+```
