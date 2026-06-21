@@ -1,0 +1,62 @@
+[
+  {
+    "id": "total-orders",
+    "question": "How many orders are there?",
+    "expected_column_count": 1,
+    "expected_rows": [[4]]
+  },
+  {
+    "id": "total-revenue",
+    "question": "What is the total revenue across all order items?",
+    "expected_column_count": 1,
+    "expected_rows": [[468.0]]
+  },
+  {
+    "id": "total-gross-profit",
+    "question": "What is the total gross profit, calculated as revenue minus cost?",
+    "expected_column_count": 1,
+    "expected_rows": [[51.0]]
+  },
+  {
+    "id": "orders-by-region",
+    "question": "How many orders are in each region? Return the region name and order count.",
+    "expected_column_count": 2,
+    "expected_rows": [["North", 2], ["South", 1], ["West", 1]]
+  },
+  {
+    "id": "revenue-by-category",
+    "question": "What is the total revenue for each product category? Return the category name and revenue.",
+    "expected_column_count": 2,
+    "expected_rows": [["Office", 68.0], ["Technology", 200.0], ["Furniture", 200.0]]
+  },
+  {
+    "id": "negative-margin-categories",
+    "question": "Which product categories have negative total gross profit? Return the category name and gross profit.",
+    "expected_column_count": 2,
+    "expected_rows": [["Furniture", -20.0]]
+  },
+  {
+    "id": "top-revenue-products",
+    "question": "Which products are tied for the highest total revenue? Return every tied product name and its revenue.",
+    "expected_column_count": 2,
+    "expected_rows": [["Desk", 200.0], ["Keyboard", 200.0]]
+  },
+  {
+    "id": "second-quarter-revenue",
+    "question": "What was total revenue in the second quarter of 2026?",
+    "expected_column_count": 1,
+    "expected_rows": [[158.0]]
+  },
+  {
+    "id": "quantity-by-product",
+    "question": "How many units were sold for each product? Return the product name and total quantity.",
+    "expected_column_count": 2,
+    "expected_rows": [["Notebook", 7], ["Keyboard", 3], ["Desk", 1]]
+  },
+  {
+    "id": "negative-margin-regions",
+    "question": "Which regions have negative total gross profit? Return the region name and gross profit.",
+    "expected_column_count": 2,
+    "expected_rows": [["South", -20.0]]
+  }
+]
