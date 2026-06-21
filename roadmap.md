@@ -6,11 +6,11 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 ## Current focus
 
-- **Active stage:** Phase 3 — Safety Hardening (`[ ]`)
-- **Latest checkpoint:** the Phase 2 baseline run completed against Gemini with `7/10` correct results and the versioned 10-question harness preserved local JSONL audit records.
-- **Completed work:** migrated generation from OpenAI to Gemini, kept the provider boundary/test coverage intact, added the validator-before-execution pipeline, and verified the baseline with local JSONL audit output.
-- **Pending next:** harden the SQL validation layer against the full forbidden-node set, confirm permitted `SELECT`/`WITH` queries still pass unchanged, add bypass attempts, and verify rejected SQL never reaches the database adapter.
-- **Resume point:** start with the Phase 3 checklist in `roadmap.md`, covering `ATTACH`, `COPY`, pragmas, extension operations, and bypass cases before DuckDB execution.
+- **Active stage:** Phase 4 — Schema Enrichment + RAG (`[ ]`)
+- **Latest checkpoint:** Phase 3 hardened the SQLGlot policy with an explicit `SELECT`/`WITH` whitelist, forbidden AST nodes and external-data functions, and a shared malicious-query corpus blocked before adapter execution.
+- **Completed work:** closed the baseline at `7/10`, then covered mutation, `ATTACH`, `COPY`, pragmas, extension operations, filesystem functions, and casing/comment/nesting bypass attempts while preserving legitimate query text unchanged.
+- **Pending next:** define and version the reviewed YAML schema-enrichment format before implementing indexing or retrieval.
+- **Resume point:** start with the first Phase 4 checklist item in `roadmap.md`; define metadata for table/column descriptions, business terms, units, and aliases, then record any architectural choice in an ADR.
 - **Last updated:** 2026-06-21
 
 ---
@@ -60,10 +60,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Phase 3 — Safety Hardening
 **Goal:** expand the Phase 1 safety foundation and verify defense in depth.
 
-- [ ] Cover all forbidden SQLGlot node types, including `ATTACH`, `COPY`, pragmas, and extension operations
-- [ ] Verify legitimate `SELECT` and `WITH` queries pass unchanged
-- [ ] Add bypass attempts involving comments, casing, nesting, and unusual syntax
-- [ ] Confirm rejected SQL never reaches the database adapter
+- [x] Cover all forbidden SQLGlot node types, including `ATTACH`, `COPY`, pragmas, and extension operations
+- [x] Verify legitimate `SELECT` and `WITH` queries pass unchanged
+- [x] Add bypass attempts involving comments, casing, nesting, and unusual syntax
+- [x] Confirm rejected SQL never reaches the database adapter
 
 **Exit criteria:** 100% of a hand-written "malicious query" test set is blocked before reaching DuckDB.
 
