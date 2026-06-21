@@ -1,0 +1,59 @@
+version: 1
+reviewed: true
+tables:
+  - schema_name: main
+    name: categories
+    description: Product categories used for merchandising and margin reporting.
+    business_terms: [category, merchandise group]
+    aliases: [product categories]
+    columns:
+      - name: name
+        description: Human-readable category name.
+        aliases: [category name]
+  - schema_name: main
+    name: order_items
+    description: Product-level line items and financial measures for each order.
+    business_terms: [order line, sales line]
+    aliases: [line items]
+    columns:
+      - name: quantity
+        description: Number of product units sold on the order line.
+        unit: units
+      - name: revenue
+        description: Sales revenue recorded for the order line.
+        business_terms: [sales, turnover]
+        aliases: [line revenue]
+        unit: USD
+      - name: cost
+        description: Product cost recorded for the order line.
+        business_terms: [cost of goods sold]
+        aliases: [COGS, line cost]
+        unit: USD
+  - schema_name: main
+    name: orders
+    description: Customer orders with their transaction date and sales region.
+    business_terms: [order, transaction]
+    aliases: [sales orders]
+    columns:
+      - name: order_date
+        description: Calendar date on which the order was placed.
+        aliases: [transaction date]
+        unit: date
+  - schema_name: main
+    name: products
+    description: Products available for sale and their assigned category.
+    business_terms: [product, item]
+    aliases: [product catalog]
+    columns:
+      - name: name
+        description: Human-readable product name.
+        aliases: [product name, item name]
+  - schema_name: main
+    name: regions
+    description: Sales regions used to group customer orders geographically.
+    business_terms: [region, territory]
+    aliases: [sales regions]
+    columns:
+      - name: name
+        description: Human-readable sales region name.
+        aliases: [region name, territory name]
