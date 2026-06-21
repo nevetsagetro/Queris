@@ -15,6 +15,9 @@ from queris.schema import DatabaseSchema, introspect_schema
 from queris.sql_validation import SQLValidationError, parse_read_only
 
 FailureStage = Literal["validation", "execution"]
+DEFAULT_MAX_RETRIES = 3
+MAX_RETRIES = 10
+_GRAPH_STEPS_PER_ATTEMPT = 4
 
 
 class CorrectingSQLGenerator(Protocol):
@@ -40,12 +43,24 @@ class AgentQueryResult(BaseModel):
     rows: tuple[tuple[Any, ...], ...] = ()
     failure_stage: FailureStage | None = None
     error: str | None = None
+    retries_exhausted: bool = False
+    explanation: str | None = None
 
     @model_validator(mode="after")
     def require_consistent_terminal_state(self) -> Self:
-        if self.status == "success" and (self.failure_stage is not None or self.error is not None):
+        if self.status == "success" and (
+            self.failure_stage is not None
+            or self.error is not None
+            or self.retries_exhausted
+            or self.explanation is not None
+        ):
             raise ValueError("successful result must not contain failure details")
-        if self.status == "failure" and (self.failure_stage is None or not self.error):
+        if self.status == "failure" and (
+            self.failure_stage is None
+            or not self.error
+            or not self.retries_exhausted
+            or not self.explanation
+        ):
             raise ValueError("failed result must contain failure details")
         return self
 
@@ -60,7 +75,8 @@ class _AgentState(TypedDict):
     failure_stage: NotRequired[FailureStage | None]
     error: NotRequired[str | None]
     correction: NotRequired[SQLCorrectionContext | None]
-    correction_attempted: NotRequired[bool]
+    retry_count: int
+    max_retries: int
 
 
 def run_agent_loop(
@@ -70,9 +86,11 @@ def run_agent_loop(
     schema_selector: SchemaSelector,
     *,
     sample_limit: int = 3,
+    max_retries: int = DEFAULT_MAX_RETRIES,
 ) -> AgentQueryResult:
-    """Run generate, validate, execute, and at most one correction pass."""
+    """Run generate, validate, and execute with a bounded correction loop."""
     normalized_question = _normalize_question(question)
+    _validate_max_retries(max_retries)
 
     with read_only_connection(database_path) as connection:
         schema = introspect_schema(connection, sample_limit=sample_limit)
@@ -82,10 +100,18 @@ def run_agent_loop(
                 "question": normalized_question,
                 "schema": schema,
                 "correction": None,
-                "correction_attempted": False,
-            }
+                "retry_count": 0,
+                "max_retries": max_retries,
+            },
+            config={
+                "recursion_limit": max(
+                    25,
+                    (max_retries + 1) * _GRAPH_STEPS_PER_ATTEMPT,
+                )
+            },
         )
 
+    failed = state["status"] == "failure"
     return AgentQueryResult(
         status=state["status"],
         question=normalized_question,
@@ -94,6 +120,8 @@ def run_agent_loop(
         rows=state.get("rows", ()),
         failure_stage=state.get("failure_stage"),
         error=state.get("error"),
+        retries_exhausted=failed,
+        explanation=_build_exhaustion_explanation(state["retry_count"]) if failed else None,
     )
 
 
@@ -158,13 +186,13 @@ def _build_graph(
                 failure_stage=failure_stage,
                 error=error,
             ),
-            "correction_attempted": True,
+            "retry_count": state["retry_count"] + 1,
         }
 
     def route_failed_state(state: _AgentState) -> str:
         if state.get("status") != "failure":
             return "success"
-        return "failure" if state.get("correction_attempted", False) else "correct"
+        return "failure" if state["retry_count"] >= state["max_retries"] else "correct"
 
     graph = StateGraph(_AgentState)
     graph.add_node("generate", generate)
@@ -194,3 +222,14 @@ def _normalize_question(question: str) -> str:
     if not normalized_question:
         raise ValueError("question must be a non-empty string")
     return normalized_question
+
+
+def _validate_max_retries(max_retries: int) -> None:
+    if type(max_retries) is not int or not 0 <= max_retries <= MAX_RETRIES:
+        raise ValueError(f"max_retries must be an integer between 0 and {MAX_RETRIES}")
+
+
+def _build_exhaustion_explanation(retry_count: int) -> str:
+    attempts = retry_count + 1
+    label = "attempt" if attempts == 1 else "attempts"
+    return f"Could not produce executable read-only SQL after {attempts} {label}."
