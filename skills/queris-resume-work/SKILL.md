@@ -23,6 +23,9 @@ description: Resume and deliver Queris repository work from its recorded roadmap
 - Never develop directly on `main`.
 - Resume the current clean feature branch when it matches the checkpoint.
 - Otherwise branch from the appropriate reviewed base using `<type>/<short-kebab-case>`.
+- Before branching for a new roadmap item, verify that the completed checkpoint branch is clean,
+  has an upstream, and has no commits in `@{upstream}..HEAD`. Push it first when needed. If the push
+  fails, report the failure and do not start the next branch.
 - When the base branch is not merged, treat the new branch as stacked and report that dependency.
 - Never discard unrelated changes. Stop only when they make the requested work unsafe.
 
@@ -45,6 +48,22 @@ python -m pytest
 git diff --check
 ```
 
-Stage explicit files, inspect `git diff --cached --check` and `git diff --cached --stat`, then create focused Conventional Commits. Separate decisions/docs, infrastructure, behavior, and checkpoint updates when each is independently reviewable. Do not push unless requested; if requested, verify the upstream and report authentication failures precisely.
+Stage explicit files, inspect `git diff --cached --check` and `git diff --cached --stat`, then create focused Conventional Commits. Separate decisions/docs, infrastructure, behavior, and checkpoint updates when each is independently reviewable.
+
+When the committed roadmap update advances `Current focus` to another item, phase, or stage:
+
+1. Push the completed branch and set its upstream when absent.
+2. Verify the remote contains the local checkpoint commit and the worktree is clean.
+3. Open or update its pull request against the correct base branch.
+4. Check that the pull request is mergeable and has no conflicts, required checks pass, and required
+   review is approved. Do not merge a draft, conflicted, failing, or unapproved pull request.
+5. Merge through the pull request, never by pushing a local merge directly to the protected base.
+
+For another item in the same phase, stacked work may continue after step 3 while review is pending;
+report the dependency and keep each pull request based on its immediate predecessor. Before advancing
+to another phase or stage, complete steps 4-5 for every prerequisite pull request, update local
+`main` from `origin/main`, and create the next branch from that merged commit.
+
+For work that does not advance the roadmap checkpoint, do not push unless requested. Report push or authentication failures precisely; a failed checkpoint push blocks the phase or stage transition.
 
 Finish by reporting the branch, commits, verification results, and exact roadmap resume point.
