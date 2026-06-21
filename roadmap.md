@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 5 — Agent Loop (`[~]`)
-- **Latest checkpoint:** added one bounded correction pass that feeds validation or DuckDB diagnostics back to SQL generation as untrusted data.
-- **Completed work:** implemented the Phase 5 LangGraph foundation and verified correction after both unsafe and non-executable SQL attempts.
-- **Pending next:** make the retry cap configurable and fail gracefully when all attempts are exhausted.
-- **Resume point:** replace the fixed single correction with a validated retry limit (default 3) and expose exhausted-attempt state without weakening validation-before-execution.
+- **Latest checkpoint:** added a validated configurable retry cap (default 3) with typed exhaustion state and a graceful terminal explanation.
+- **Completed work:** implemented bounded correction for validation and execution failures while preserving validation before every execution attempt.
+- **Pending next:** expose retry count per query for the Phase 6 evaluation metrics.
+- **Resume point:** add structured retry-count output to successful and exhausted agent results, with tests for zero-retry, recovered, and exhausted runs.
 - **Last updated:** 2026-06-21
 
 ---
@@ -92,7 +92,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 - [x] Wrap generation, the Phase 1/3 validation layer, and execution into a single orchestrated loop
 - [x] On DuckDB syntax/execution error, feed the error message back to the LLM and retry
-- [ ] Cap retries (configurable, default suggestion: 3) and fail gracefully with an explanation after the cap
+- [x] Cap retries (configurable, default 3) and fail gracefully with an explanation after the cap
 - [ ] Track retry count per query (needed for Phase 6 metrics)
 - [x] Integrate standalone LangGraph as selected in ADR 0007
 
