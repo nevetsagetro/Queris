@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 4 — Schema Enrichment + RAG (`[~]`)
-- **Latest checkpoint:** added deterministic table and column embedding documents covering identifiers, reviewed enrichment, types, and bounded samples, plus a provider-neutral batch contract and Gemini adapter recorded in ADR 0005.
-- **Completed work:** completed Phase 3 and the first five Phase 4 items through live enrichment validation and schema embedding generation.
-- **Pending next:** store schema embeddings in DuckDB VSS or the Phase 0 vector-store alternative.
-- **Resume point:** resolve the deferred Phase 0 vector-store decision, record it in an ADR, and implement the sixth Phase 4 checklist item with deterministic replacement and dimension checks.
+- **Latest checkpoint:** selected DuckDB VSS for the rebuildable local schema index in ADR 0006 and added transactional fixed-dimension storage with cosine HNSW indexing.
+- **Completed work:** completed Phase 3 and the first six Phase 4 items through schema embedding generation and DuckDB VSS storage.
+- **Pending next:** implement cosine-similarity retrieval from a question embedding to the top-k schema documents.
+- **Resume point:** implement the seventh Phase 4 checklist item in `roadmap.md`; validate query-vector dimension and model compatibility, return ordered structured matches, and test top-k bounds and ties.
 - **Last updated:** 2026-06-21
 
 ---
@@ -19,7 +19,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 **Goal:** resolve the blocking technical choices so Phase 1 can start unambiguously.
 
 - [ ] Pick agent orchestrator: LangChain vs smolagents (deferred until Phase 5)
-- [ ] Pick vector store: DuckDB VSS vs pgvector (deferred until Phase 4)
+- [x] Pick vector store: DuckDB VSS for the rebuildable local MVP (ADR 0006)
 - [x] Pick LLM provider(s) and credential management approach (ADR 0003; supersedes ADR 0002)
 - [x] Choose a deterministic synthetic retail dataset (ADR 0001)
 - [x] Confirm the initial layout (`src/queris/`, `tests/`, `evals/`, `data/`, and an optional `frontend/`)
@@ -77,7 +77,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 - [x] Provide a command that drafts descriptions from schema metadata; require human review before activation
 - [x] Validate enrichment against the live schema and report stale or unknown table/column references
 - [x] Generate embeddings for enriched descriptions, raw identifiers, and safe sample summaries
-- [ ] Store embeddings in DuckDB VSS (or pgvector, per Phase 0 decision)
+- [x] Store embeddings in DuckDB VSS (ADR 0006)
 - [ ] Implement cosine-similarity retrieval: question → top-k relevant tables/columns
 - [ ] Replace "full schema in prompt" with "retrieved schema in prompt" in the pipeline from Phase 2
 - [ ] Add a synthetic wide schema (30+ tables) with ambiguous identifiers such as `amt`, `qty`, and `flg_x`
