@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 5 — Agent Loop (`[~]`)
-- **Latest checkpoint:** added a validated configurable retry cap (default 3) with typed exhaustion state and a graceful terminal explanation.
-- **Completed work:** implemented bounded correction for validation and execution failures while preserving validation before every execution attempt.
-- **Pending next:** expose retry count per query for the Phase 6 evaluation metrics.
-- **Resume point:** add structured retry-count output to successful and exhausted agent results, with tests for zero-retry, recovered, and exhausted runs.
+- **Latest checkpoint:** added structured retry counts to successful, recovered, and exhausted agent results.
+- **Completed work:** completed all Phase 5 implementation checklist items with bounded correction, graceful exhaustion, and retry metrics.
+- **Pending next:** merge the retry-metrics branch and validate the Phase 5 exit criterion before transitioning to Phase 6.
+- **Resume point:** after `feat/agent-retry-metrics` merges, exercise deliberately malformed-prone questions through the live agent loop and record whether a majority self-correct within the cap.
 - **Last updated:** 2026-06-21
 
 ---
@@ -93,7 +93,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 - [x] Wrap generation, the Phase 1/3 validation layer, and execution into a single orchestrated loop
 - [x] On DuckDB syntax/execution error, feed the error message back to the LLM and retry
 - [x] Cap retries (configurable, default 3) and fail gracefully with an explanation after the cap
-- [ ] Track retry count per query (needed for Phase 6 metrics)
+- [x] Track retry count per query (needed for Phase 6 metrics)
 - [x] Integrate standalone LangGraph as selected in ADR 0007
 
 **Exit criteria:** a deliberately malformed-prone question (e.g. ambiguous join) self-corrects within the retry cap on a majority of runs.
