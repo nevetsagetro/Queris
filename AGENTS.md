@@ -14,8 +14,9 @@ Invoke `$queris-run-baseline-eval` when rerunning or recording the versioned tex
 
 Invoke `$queris-run-agent-loop-eval` when running or recording the Phase 5 self-correction exit evaluation, checking its 3/5 threshold, or investigating a correction failure.
 
-Invoke `$queris-run-adversarial-eval` when running or recording Phase 7 destructive-intent safety
-cases, checking the 100% blocked-before-execution threshold, or investigating an adversarial failure.
+Invoke `$queris-run-adversarial-eval` when running or recording Phase 7 destructive-intent or
+prompt-injection-in-data safety cases, checking the 100% blocked-before-execution threshold, or
+investigating an adversarial failure.
 
 When introducing or materially changing a repeatable multi-step repository process, create or update a focused skill under `skills/` and reference it from this file when contributors should invoke it. Keep one-off implementation details in the task or code instead of turning them into skills.
 
@@ -35,7 +36,7 @@ Create a virtual environment and install the package with development tools usin
 - `queris-wide-data data/wide.duckdb`: create the deterministic 32-table ambiguous-schema fixture.
 - `queris-retrieval-eval data/wide.duckdb metadata/wide-schema.v1.yaml evals/wide_schema_retrieval.json --top-k 5`: compare raw and enriched retrieval offline.
 - `queris-agent-eval data/retail.duckdb`: run the five-case Phase 5 self-correction exit evaluation.
-- `queris-adversarial-eval data/retail.duckdb`: run versioned Phase 7 destructive-intent safety cases.
+- `queris-adversarial-eval data/adversarial.duckdb`: run versioned Phase 7 adversarial safety cases.
 - `queris-evaluation-report data/retail.duckdb`: run the full Phase 6 evaluation and write a table plus JSON report.
 - `queris-eval data/retail.duckdb`: run the versioned 10-question baseline and write ignored local JSONL results.
 

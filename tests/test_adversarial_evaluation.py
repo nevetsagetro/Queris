@@ -9,7 +9,7 @@ import queris.agent_loop as agent_loop
 from queris.adversarial_evaluation import (
     DestructiveIntentCase,
     load_adversarial_evaluation_set,
-    run_destructive_intent_evaluation,
+    run_adversarial_evaluation,
     summarize_adversarial_outcomes,
 )
 
@@ -21,9 +21,12 @@ def test_versioned_destructive_cases_are_unique() -> None:
 
     assert evaluation_set.format_version == 1
     assert evaluation_set.dataset_id == "retail-v1"
-    assert len(evaluation_set.cases) == 8
-    assert len({case.id for case in evaluation_set.cases}) == 8
-    assert all(case.category == "destructive-intent" for case in evaluation_set.cases)
+    assert len(evaluation_set.cases) == 11
+    assert len({case.id for case in evaluation_set.cases}) == 11
+    assert {case.category for case in evaluation_set.cases} == {
+        "destructive-intent",
+        "prompt-injection-data",
+    }
 
 
 def test_destructive_intent_is_blocked_before_execution(
@@ -36,13 +39,14 @@ def test_destructive_intent_is_blocked_before_execution(
     monkeypatch.setattr(agent_loop, "execute_read_only", forbidden_execution)
     evaluation_set = load_adversarial_evaluation_set(ADVERSARIAL_SET_PATH)
 
-    outcomes = run_destructive_intent_evaluation(sample_database, evaluation_set)
+    outcomes = run_adversarial_evaluation(sample_database, evaluation_set)
     summary = summarize_adversarial_outcomes(outcomes)
 
     assert all(outcome.blocked_before_execution for outcome in outcomes)
     assert all(outcome.failure_stage == "validation" for outcome in outcomes)
-    assert summary.total == 8
-    assert summary.passed_cases == 8
+    assert all(outcome.source_value_observed for outcome in outcomes)
+    assert summary.total == 11
+    assert summary.passed_cases == 11
     assert summary.block_rate == 1
     assert summary.passed is True
 
@@ -58,12 +62,27 @@ def test_allowed_sql_fails_destructive_block_criterion(sample_database: Path) ->
     )
     altered_set = evaluation_set.model_copy(update={"cases": (allowed_case,)})
 
-    outcomes = run_destructive_intent_evaluation(sample_database, altered_set)
+    outcomes = run_adversarial_evaluation(sample_database, altered_set)
     summary = summarize_adversarial_outcomes(outcomes)
 
     assert outcomes[0].blocked_before_execution is False
     assert outcomes[0].passed is False
     assert summary.passed is False
+
+
+def test_missing_injection_sample_fails_case(sample_database: Path) -> None:
+    evaluation_set = load_adversarial_evaluation_set(ADVERSARIAL_SET_PATH)
+    injection_case = next(
+        case for case in evaluation_set.cases if case.category == "prompt-injection-data"
+    )
+    missing_source = injection_case.model_copy(update={"source_value": "not in the fixture"})
+    altered_set = evaluation_set.model_copy(update={"cases": (missing_source,)})
+
+    [outcome] = run_adversarial_evaluation(sample_database, altered_set)
+
+    assert outcome.blocked_before_execution is True
+    assert outcome.source_value_observed is False
+    assert outcome.passed is False
 
 
 def test_adversarial_set_rejects_duplicate_ids(tmp_path: Path) -> None:
@@ -100,5 +119,5 @@ def test_cli_writes_passing_audit_report(
     stdout = capsys.readouterr().out
     assert payload["format_version"] == 1
     assert payload["summary"]["passed"] is True
-    assert len(payload["outcomes"]) == 8
+    assert len(payload["outcomes"]) == 11
     assert f"{output_path}\n" in stdout
