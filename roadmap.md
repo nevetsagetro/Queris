@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 6 — Evaluation Harness (`[~]`)
-- **Latest checkpoint:** selected versioned JSON for Phase 6 evaluation sets in ADR 0008 and added a 15-question reviewed `retail-v1` tranche covering all required query categories.
-- **Completed work:** completed Phase 5 and added strict Phase 6 set validation for version, IDs, row shape, coverage metadata, and read-only reference SQL.
-- **Pending next:** expand `evals/retail_v1.json` from 15 toward 50–100 reviewed questions while preserving deterministic reference-result validation.
-- **Resume point:** author the next reviewed retail question tranche, prioritizing additional multi-table joins, time filters, HAVING clauses, and nested subqueries before implementing aggregate metrics.
+- **Latest checkpoint:** expanded the reviewed `retail-v1` evaluation set from 15 to 30 questions with deeper join, date-boundary, HAVING, and nested-aggregate coverage.
+- **Completed work:** completed Phase 5, selected versioned JSON in ADR 0008, and reference-validated 30 Phase 6 questions across every required query category.
+- **Pending next:** expand `evals/retail_v1.json` from 30 to at least 50 reviewed questions while preserving deterministic reference-result validation.
+- **Resume point:** author the final 20-question minimum expansion tranche, then mark the 50–100-question roadmap item complete and begin execution/result metrics.
 - **Last updated:** 2026-06-22
 
 ---

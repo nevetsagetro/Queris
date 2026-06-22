@@ -1,5 +1,6 @@
 import json
 from collections import Counter
+from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 
@@ -20,15 +21,17 @@ REQUIRED_CATEGORIES = {
 
 
 def _normalized_rows(rows: tuple[tuple[object, ...], ...]) -> Counter[tuple[object, ...]]:
-    return Counter(
-        tuple(
-            Decimal(str(value)).normalize()
-            if isinstance(value, (int, float, Decimal))
-            else value
-            for value in row
-        )
-        for row in rows
-    )
+    return Counter(tuple(_normalized_value(value) for value in row) for row in rows)
+
+
+def _normalized_value(value: object) -> object:
+    if isinstance(value, bool) or value is None:
+        return value
+    if isinstance(value, (int, float, Decimal)):
+        return Decimal(str(value)).normalize()
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    return value
 
 
 def test_retail_evaluation_set_is_versioned_unique_and_covers_required_categories() -> None:
@@ -36,8 +39,8 @@ def test_retail_evaluation_set_is_versioned_unique_and_covers_required_categorie
 
     assert evaluation_set.format_version == 1
     assert evaluation_set.dataset_id == "retail-v1"
-    assert len(evaluation_set.cases) == 15
-    assert len({case.id for case in evaluation_set.cases}) == 15
+    assert len(evaluation_set.cases) == 30
+    assert len({case.id for case in evaluation_set.cases}) == 30
     assert {case.category for case in evaluation_set.cases} == REQUIRED_CATEGORIES
 
 
