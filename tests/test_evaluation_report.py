@@ -87,6 +87,7 @@ def test_cli_runs_full_set_and_writes_report(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     output_path = tmp_path / "phase6.json"
+    history_directory = tmp_path / "history"
     monkeypatch.setattr(evaluation_report, "GeminiSQLGenerator", ReferenceGenerator)
     monkeypatch.setattr(
         sys,
@@ -96,6 +97,8 @@ def test_cli_runs_full_set_and_writes_report(
             str(sample_database),
             "--output",
             str(output_path),
+            "--history-dir",
+            str(history_directory),
             "--samples",
             "0",
         ],
@@ -109,7 +112,9 @@ def test_cli_runs_full_set_and_writes_report(
     assert payload["accuracy"]["correct_results"] == 50
     assert payload["safety"]["blocked"] == 24
     assert "Execution accuracy" in stdout
+    assert "Historical comparison: no compatible previous report" in stdout
     assert f"JSON report: {output_path}" in stdout
+    assert len(tuple(history_directory.glob("*.json"))) == 1
 
 
 def test_cli_requires_token_rates_as_a_pair(monkeypatch: pytest.MonkeyPatch) -> None:

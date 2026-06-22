@@ -6,11 +6,11 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 ## Current focus
 
-- **Active stage:** Phase 6 — Evaluation Harness (`[~]`)
-- **Latest checkpoint:** added the one-command Phase 6 evaluation CLI with a human-readable metric table and versioned JSON audit report.
-- **Completed work:** completed the 50-case set, all planned Phase 6 metrics, and the full evaluation report command.
-- **Pending next:** store historical evaluation runs so regressions are visible over time.
-- **Resume point:** define the local historical-run layout and regression comparison contract around versioned Phase 6 JSON reports.
+- **Active stage:** Phase 7 — Adversarial Test Suite (`[~]`)
+- **Latest checkpoint:** completed Phase 6 with ignored timestamped report history and compatible-run regression comparisons (ADR 0009).
+- **Completed work:** completed the 50-case evaluation harness, all planned metrics, report CLI, and local historical regression tracking.
+- **Pending next:** add versioned Phase 7 adversarial cases with explicit pass/fail criteria, starting with destructive natural-language intent.
+- **Resume point:** define the adversarial evaluation-set contract and verify destructive intent cannot reach validated execution.
 - **Last updated:** 2026-06-22
 
 ---
@@ -113,7 +113,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
   - [x] Latency per query (p50/p95)
   - [x] Token/cost per query
 - [x] Build a CLI/script to run the full eval set and output a report (table + JSON)
-- [ ] Store historical eval runs so regressions are visible over time
+- [x] Store historical eval runs so regressions are visible over time (ADR 0009)
 
 **Exit criteria:** running one command produces a full metrics report against the 50–100 question set.
 
