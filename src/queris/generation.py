@@ -7,6 +7,7 @@ from google import genai
 from pydantic import BaseModel, ConfigDict, StringConstraints
 
 from queris.schema import DatabaseSchema
+from queris.usage import GenerationUsage
 
 DEFAULT_GEMINI_MODEL = "gemini-3.5-flash"
 
@@ -27,6 +28,15 @@ class SQLGenerationError(RuntimeError):
 
 class _Response(Protocol):
     text: str | None
+    usage_metadata: "_UsageMetadata | None"
+
+
+class _UsageMetadata(Protocol):
+    prompt_token_count: int | None
+    candidates_token_count: int | None
+    thoughts_token_count: int | None
+    tool_use_prompt_token_count: int | None
+    total_token_count: int | None
 
 
 class _ModelsAPI(Protocol):
@@ -99,6 +109,7 @@ class GeminiSQLGenerator:
 
         self.model = selected_model
         self._client = client or self._create_client()
+        self._usage = GenerationUsage()
 
     def generate_sql(
         self,
@@ -111,10 +122,15 @@ class GeminiSQLGenerator:
             model=self.model,
             contents=build_sql_prompt(schema, question, correction),
         )
+        self._usage += _response_usage(response)
         sql = response.text.strip() if response.text else ""
         if not sql:
             raise SQLGenerationError("Gemini returned an empty SQL response")
         return sql
+
+    def usage_snapshot(self) -> GenerationUsage:
+        """Return cumulative provider usage recorded by this generator."""
+        return self._usage
 
     @staticmethod
     def _create_client() -> genai.Client:
@@ -122,3 +138,17 @@ class GeminiSQLGenerator:
         if not api_key:
             raise SQLGenerationError("GEMINI_API_KEY is required for live SQL generation")
         return genai.Client(api_key=api_key)
+
+
+def _response_usage(response: _Response) -> GenerationUsage:
+    metadata = response.usage_metadata
+    if metadata is None:
+        return GenerationUsage()
+    input_tokens = (metadata.prompt_token_count or 0) + (metadata.tool_use_prompt_token_count or 0)
+    output_tokens = (metadata.candidates_token_count or 0) + (metadata.thoughts_token_count or 0)
+    total_tokens = metadata.total_token_count
+    return GenerationUsage(
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        total_tokens=total_tokens if total_tokens is not None else input_tokens + output_tokens,
+    )

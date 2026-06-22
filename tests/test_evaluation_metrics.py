@@ -1,3 +1,4 @@
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,7 @@ from queris.evaluation_metrics import (
 from queris.evaluation_set import EvaluationSet, EvaluationSetCase, load_evaluation_set
 from queris.generation import SQLCorrectionContext
 from queris.schema import DatabaseSchema
+from queris.usage import GenerationUsage, TokenPricing
 
 EVALUATION_SET_PATH = Path("evals/retail_v1.json")
 
@@ -59,6 +61,24 @@ class OneRetryGenerator(ReferenceGenerator):
         return super().generate_sql(schema, question, correction)
 
 
+class UsageReferenceGenerator(ReferenceGenerator):
+    def __init__(self, evaluation_set: EvaluationSet) -> None:
+        super().__init__(evaluation_set)
+        self._usage = GenerationUsage()
+
+    def generate_sql(
+        self,
+        schema: DatabaseSchema,
+        question: str,
+        correction: SQLCorrectionContext | None = None,
+    ) -> str:
+        self._usage += GenerationUsage(input_tokens=10, output_tokens=2, total_tokens=12)
+        return super().generate_sql(schema, question, correction)
+
+    def usage_snapshot(self) -> GenerationUsage:
+        return self._usage
+
+
 def _subset(evaluation_set: EvaluationSet, count: int) -> EvaluationSet:
     return evaluation_set.model_copy(update={"cases": evaluation_set.cases[:count]})
 
@@ -83,6 +103,8 @@ def test_reference_queries_produce_perfect_accuracy(sample_database: Path) -> No
     assert metrics.average_retry_count == 0
     assert metrics.p50_latency_ms >= 0
     assert metrics.p95_latency_ms >= metrics.p50_latency_ms
+    assert metrics.total_tokens == 0
+    assert metrics.estimated_cost_usd is None
     assert all(outcome.retry_count == 0 for outcome in outcomes)
 
 
@@ -147,6 +169,29 @@ def test_latency_metrics_use_monotonic_case_timings(
     assert metrics.p95_latency_ms == pytest.approx(38)
 
 
+def test_usage_metrics_aggregate_tokens_and_explicit_cost(sample_database: Path) -> None:
+    evaluation_set = _subset(load_evaluation_set(EVALUATION_SET_PATH), 2)
+    pricing = TokenPricing(
+        input_usd_per_million=Decimal("1"),
+        output_usd_per_million=Decimal("2"),
+    )
+
+    outcomes = run_accuracy_evaluation(
+        sample_database,
+        evaluation_set,
+        UsageReferenceGenerator(evaluation_set),
+        sample_limit=0,
+        pricing=pricing,
+    )
+    metrics = summarize_accuracy(outcomes)
+
+    assert [outcome.usage.total_tokens for outcome in outcomes] == [12, 12]
+    assert metrics.input_tokens == 20
+    assert metrics.output_tokens == 4
+    assert metrics.total_tokens == 24
+    assert metrics.estimated_cost_usd == Decimal("0.000028")
+
+
 def test_result_matching_allows_row_and_column_reordering() -> None:
     case = EvaluationSetCase(
         id="reordered-result",
@@ -181,6 +226,8 @@ def test_summary_handles_no_attempted_cases() -> None:
     assert metrics.average_retry_count == 0
     assert metrics.p50_latency_ms == 0
     assert metrics.p95_latency_ms == 0
+    assert metrics.total_tokens == 0
+    assert metrics.estimated_cost_usd is None
 
 
 def test_correct_result_requires_successful_execution() -> None:
