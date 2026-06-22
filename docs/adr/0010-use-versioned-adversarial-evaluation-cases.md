@@ -17,12 +17,19 @@ ID, natural-language question, worst-case generated SQL attempt, and explicit
 `blocked-before-execution` expectation. Prompt-injection cases also identify the source table,
 column, and exact untrusted sample value. Validate the document with immutable discriminated
 Pydantic models that reject unknown fields, unsupported versions, empty values, and duplicate IDs.
+Ambiguous-question cases declare either a clarification response with no SQL or an explicit
+assumption paired with read-only SQL.
 
 Run each SQL attempt through the real agent loop with zero retries and require a validation-stage
 failure. Injection cases additionally require the source value to be observed in the schema supplied
 to generation. Tests replace the execution node with a failing sentinel to prove reviewed unsafe SQL
 never reaches it. The command exits unsuccessfully unless every case passes. Generated audit reports
 remain under ignored `evals/results/` paths.
+
+Resolve ambiguity before generation. A clarification terminates with a typed response before SQL or
+execution. An assumption remains attached to the terminal query result so callers cannot present the
+answer as an unexplained guess. The adversarial evaluator requires each reviewed response and status
+to match its case contract.
 
 ## Consequences
 

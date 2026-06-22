@@ -31,14 +31,29 @@ class CorrectingSQLGenerator(Protocol):
     ) -> str: ...
 
 
-class AgentQueryResult(BaseModel):
-    """Terminal success or failure from one graph execution."""
+class QuestionResolution(BaseModel):
+    """Structured pre-generation decision for an ambiguous question."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    status: Literal["success", "failure"]
+    kind: Literal["clarification", "assumption"]
+    message: str = Field(min_length=1)
+
+
+class QuestionResolver(Protocol):
+    """Resolve ambiguity before SQL generation or return no intervention."""
+
+    def resolve(self, schema: DatabaseSchema, question: str) -> QuestionResolution | None: ...
+
+
+class AgentQueryResult(BaseModel):
+    """Terminal query, failure, or clarification from agent orchestration."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    status: Literal["success", "failure", "clarification"]
     question: str
-    sql: str
+    sql: str | None
     columns: tuple[str, ...] = ()
     rows: tuple[tuple[Any, ...], ...] = ()
     failure_stage: FailureStage | None = None
@@ -46,23 +61,45 @@ class AgentQueryResult(BaseModel):
     retry_count: int = Field(ge=0)
     retries_exhausted: bool = False
     explanation: str | None = None
+    clarification: str | None = None
+    assumption: str | None = None
 
     @model_validator(mode="after")
     def require_consistent_terminal_state(self) -> Self:
-        if self.status == "success" and (
-            self.failure_stage is not None
+        if self.status == "success":
+            if not self.sql or any(
+                (
+                    self.failure_stage is not None,
+                    self.error is not None,
+                    self.retries_exhausted,
+                    self.explanation is not None,
+                    self.clarification is not None,
+                )
+            ):
+                raise ValueError("successful result must contain SQL without failure details")
+        elif self.status == "failure":
+            if (
+                not self.sql
+                or self.failure_stage is None
+                or not self.error
+                or not self.retries_exhausted
+                or not self.explanation
+                or self.clarification is not None
+            ):
+                raise ValueError("failed result must contain SQL and failure details")
+        elif (
+            self.sql is not None
+            or self.failure_stage is not None
             or self.error is not None
             or self.retries_exhausted
             or self.explanation is not None
+            or not self.clarification
+            or self.assumption is not None
+            or self.retry_count != 0
+            or self.columns
+            or self.rows
         ):
-            raise ValueError("successful result must not contain failure details")
-        if self.status == "failure" and (
-            self.failure_stage is None
-            or not self.error
-            or not self.retries_exhausted
-            or not self.explanation
-        ):
-            raise ValueError("failed result must contain failure details")
+            raise ValueError("clarification result must terminate before SQL generation")
         return self
 
 
@@ -88,6 +125,7 @@ def run_agent_loop(
     *,
     sample_limit: int = 3,
     max_retries: int = DEFAULT_MAX_RETRIES,
+    question_resolver: QuestionResolver | None = None,
 ) -> AgentQueryResult:
     """Run generate, validate, and execute with a bounded correction loop."""
     normalized_question = _normalize_question(question)
@@ -95,6 +133,18 @@ def run_agent_loop(
 
     with read_only_connection(database_path) as connection:
         schema = introspect_schema(connection, sample_limit=sample_limit)
+        resolution = (
+            question_resolver.resolve(schema, normalized_question) if question_resolver else None
+        )
+        if resolution is not None and resolution.kind == "clarification":
+            return AgentQueryResult(
+                status="clarification",
+                question=normalized_question,
+                sql=None,
+                retry_count=0,
+                clarification=resolution.message,
+            )
+        assumption = resolution.message if resolution is not None else None
         graph = _build_graph(connection, generator, schema_selector)
         state = graph.invoke(
             {
@@ -124,6 +174,7 @@ def run_agent_loop(
         retry_count=state["retry_count"],
         retries_exhausted=failed,
         explanation=_build_exhaustion_explanation(state["retry_count"]) if failed else None,
+        assumption=assumption,
     )
 
 

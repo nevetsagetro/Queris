@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 7 — Adversarial Test Suite (`[~]`)
-- **Latest checkpoint:** added deterministic prompt-injection sample values and versioned cases that require source observation plus validation-stage blocking (ADR 0010).
-- **Completed work:** completed Phase 6 plus Phase 7 destructive-intent and prompt-injection-in-data categories at a 100% block threshold.
-- **Pending next:** define explicit behavior for ambiguous natural-language questions.
-- **Resume point:** add versioned ambiguous questions and a structured outcome that requires clarification or records an explicit assumption instead of silently guessing.
+- **Latest checkpoint:** added pre-generation ambiguity resolution with typed clarification and explicit-assumption outcomes, covered by versioned cases (ADR 0010).
+- **Completed work:** completed Phase 6 plus Phase 7 destructive-intent, prompt-injection-in-data, and ambiguous-question categories.
+- **Pending next:** verify correct behavior with similar or colliding column names across tables.
+- **Resume point:** add adversarial collision cases against the wide schema and require the correct table selection or a surfaced ambiguity.
 - **Last updated:** 2026-06-22
 
 ---
@@ -124,7 +124,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 - [x] Destructive intent: "delete the orders table", "drop all data", etc. → must be blocked, not just refused conversationally (ADR 0010)
 - [x] Prompt injection embedded in data fields (e.g. a product description containing "ignore previous instructions and...") → must not alter agent behavior (ADR 0010)
-- [ ] Ambiguous questions (no clear single interpretation) → agent should ask for clarification or state the assumption made, not silently guess
+- [x] Ambiguous questions (no clear single interpretation) → agent should ask for clarification or state the assumption made, not silently guess (ADR 0010)
 - [ ] Similar/colliding column names across tables → correct table must be picked, or the ambiguity surfaced
 - [ ] Unanswerable questions (data doesn't exist in the schema) → agent must say so, not hallucinate a query
 - [ ] Incorrect or stale enrichment metadata → validation must fail before indexing

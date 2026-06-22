@@ -4,7 +4,12 @@ import duckdb
 import pytest
 
 import queris.agent_loop as agent_loop
-from queris.agent_loop import DEFAULT_MAX_RETRIES, MAX_RETRIES, run_agent_loop
+from queris.agent_loop import (
+    DEFAULT_MAX_RETRIES,
+    MAX_RETRIES,
+    QuestionResolution,
+    run_agent_loop,
+)
 from queris.generation import SQLCorrectionContext
 from queris.pipeline import FullSchemaSelector
 from queris.schema import DatabaseSchema
@@ -24,6 +29,16 @@ class FakeGenerator:
         self.calls.append((schema, question, correction))
         index = min(len(self.calls) - 1, len(self.sql_attempts) - 1)
         return self.sql_attempts[index]
+
+
+class FakeResolver:
+    def __init__(self, resolution: QuestionResolution) -> None:
+        self.resolution = resolution
+        self.calls: list[tuple[DatabaseSchema, str]] = []
+
+    def resolve(self, schema: DatabaseSchema, question: str) -> QuestionResolution:
+        self.calls.append((schema, question))
+        return self.resolution
 
 
 def test_agent_loop_returns_typed_success(sample_database: Path) -> None:
@@ -47,8 +62,65 @@ def test_agent_loop_returns_typed_success(sample_database: Path) -> None:
     assert result.retry_count == 0
     assert result.retries_exhausted is False
     assert result.explanation is None
+    assert result.clarification is None
+    assert result.assumption is None
     assert generator.calls[0][1] == result.question
     assert generator.calls[0][2] is None
+
+
+def test_agent_loop_requests_clarification_before_generation(
+    sample_database: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def forbidden_execution(connection: object, sql: str) -> object:
+        pytest.fail(f"ambiguous question reached execution: {sql}")
+
+    monkeypatch.setattr(agent_loop, "execute_read_only", forbidden_execution)
+    generator = FakeGenerator("SELECT COUNT(*) FROM orders")
+    resolver = FakeResolver(
+        QuestionResolution(
+            kind="clarification",
+            message="Do you mean revenue, units, or order count?",
+        )
+    )
+
+    result = run_agent_loop(
+        sample_database,
+        "Show sales by region",
+        generator,
+        FullSchemaSelector(),
+        question_resolver=resolver,
+    )
+
+    assert result.status == "clarification"
+    assert result.sql is None
+    assert result.clarification == "Do you mean revenue, units, or order count?"
+    assert result.assumption is None
+    assert generator.calls == []
+    assert resolver.calls[0][1] == "Show sales by region"
+
+
+def test_agent_loop_records_explicit_assumption(sample_database: Path) -> None:
+    generator = FakeGenerator("SELECT COUNT(*) FROM orders WHERE order_date >= DATE '2026-04-01'")
+    resolver = FakeResolver(
+        QuestionResolution(
+            kind="assumption",
+            message="Assuming recent means orders on or after 2026-04-01.",
+        )
+    )
+
+    result = run_agent_loop(
+        sample_database,
+        "Show recent orders",
+        generator,
+        FullSchemaSelector(),
+        question_resolver=resolver,
+    )
+
+    assert result.status == "success"
+    assert result.assumption == "Assuming recent means orders on or after 2026-04-01."
+    assert result.clarification is None
+    assert result.rows == ((2,),)
 
 
 def test_agent_loop_stops_unsafe_sql_before_execution(
