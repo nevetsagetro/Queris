@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 6 — Evaluation Harness (`[~]`)
-- **Latest checkpoint:** added end-to-end monotonic latency in milliseconds to every Phase 6 outcome plus linearly interpolated p50/p95 aggregates.
-- **Completed work:** completed the 50-case set plus execution, result, unsafe-query, retry, and latency metrics over auditable per-case outcomes.
-- **Pending next:** implement token and cost measurement through the Gemini generation boundary.
-- **Resume point:** define provider-neutral usage data, capture Gemini token metadata per request and case, and aggregate token totals and estimated cost without exposing credentials.
+- **Latest checkpoint:** added provider-neutral token usage, cumulative Gemini metadata capture, per-case usage deltas, and explicit-rate estimated USD cost.
+- **Completed work:** completed the 50-case set and all planned Phase 6 metrics: execution, result, unsafe-query, retry, latency, token, and cost.
+- **Pending next:** build the one-command Phase 6 CLI and emit a human-readable table plus structured JSON report.
+- **Resume point:** compose accuracy and safety outcomes into a versioned report model, write table/JSON outputs, and register the full evaluation CLI.
 - **Last updated:** 2026-06-22
 
 ---
@@ -105,13 +105,13 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 - [x] Author 50–100 questions with expected SQL and expected result, covering: simple aggregation, multi-table joins, time filtering, group-by + having, nested subqueries
 - [x] Decide and document the storage format: versioned JSON (ADR 0008)
-- [ ] Implement metrics:
+- [x] Implement metrics:
   - [x] Execution accuracy (did it run without error?)
   - [x] Result accuracy (does the output match expected, allowing for row/column order differences?)
   - [x] Blocked-unsafe-query rate (from the safety test suite)
   - [x] Average number of retries (from Phase 5)
   - [x] Latency per query (p50/p95)
-  - [ ] Token/cost per query
+  - [x] Token/cost per query
 - [ ] Build a CLI/script to run the full eval set and output a report (table + JSON)
 - [ ] Store historical eval runs so regressions are visible over time
 
