@@ -242,6 +242,166 @@
       "expected_sql": "SELECT regions.name AS region_name, orders.order_date FROM regions JOIN orders USING (region_id) WHERE orders.order_date = (SELECT MIN(order_date) FROM orders)",
       "expected_columns": ["region_name", "order_date"],
       "expected_rows": [["North", "2026-01-15"]]
+    },
+    {
+      "id": "total-revenue",
+      "category": "simple-aggregation",
+      "question": "What is the total revenue across all order items?",
+      "expected_sql": "SELECT SUM(revenue) AS total_revenue FROM order_items",
+      "expected_columns": ["total_revenue"],
+      "expected_rows": [[468.0]]
+    },
+    {
+      "id": "total-gross-profit",
+      "category": "simple-aggregation",
+      "question": "What is the total gross profit, calculated as revenue minus cost?",
+      "expected_sql": "SELECT SUM(revenue - cost) AS gross_profit FROM order_items",
+      "expected_columns": ["gross_profit"],
+      "expected_rows": [[51.0]]
+    },
+    {
+      "id": "average-line-revenue",
+      "category": "simple-aggregation",
+      "question": "What is the average revenue per order item?",
+      "expected_sql": "SELECT AVG(revenue) AS average_line_revenue FROM order_items",
+      "expected_columns": ["average_line_revenue"],
+      "expected_rows": [[93.6]]
+    },
+    {
+      "id": "highest-line-cost",
+      "category": "simple-aggregation",
+      "question": "What is the highest cost recorded for one order item?",
+      "expected_sql": "SELECT MAX(cost) AS highest_line_cost FROM order_items",
+      "expected_columns": ["highest_line_cost"],
+      "expected_rows": [[220.0]]
+    },
+    {
+      "id": "revenue-by-order",
+      "category": "multi-table-join",
+      "question": "What is the total revenue for each order? Return the order ID and revenue.",
+      "expected_sql": "SELECT orders.order_id, SUM(order_items.revenue) AS revenue FROM orders JOIN order_items USING (order_id) GROUP BY orders.order_id",
+      "expected_columns": ["order_id", "revenue"],
+      "expected_rows": [[1, 110.0], [2, 200.0], [3, 130.0], [4, 28.0]]
+    },
+    {
+      "id": "cost-by-category",
+      "category": "multi-table-join",
+      "question": "What is the total cost for each product category? Return the category name and cost.",
+      "expected_sql": "SELECT categories.name AS category_name, SUM(order_items.cost) AS cost FROM categories JOIN products USING (category_id) JOIN order_items USING (product_id) GROUP BY categories.name",
+      "expected_columns": ["category_name", "cost"],
+      "expected_rows": [["Office", 52.0], ["Technology", 145.0], ["Furniture", 220.0]]
+    },
+    {
+      "id": "units-by-region",
+      "category": "multi-table-join",
+      "question": "How many units were sold in each region? Return the region name and total units.",
+      "expected_sql": "SELECT regions.name AS region_name, SUM(order_items.quantity) AS total_units FROM regions JOIN orders USING (region_id) JOIN order_items USING (order_id) GROUP BY regions.name",
+      "expected_columns": ["region_name", "total_units"],
+      "expected_rows": [["North", 8], ["South", 1], ["West", 2]]
+    },
+    {
+      "id": "product-revenue-by-region",
+      "category": "multi-table-join",
+      "question": "What is product revenue within each region? Return the region name, product name, and revenue.",
+      "expected_sql": "SELECT regions.name AS region_name, products.name AS product_name, SUM(order_items.revenue) AS revenue FROM regions JOIN orders USING (region_id) JOIN order_items USING (order_id) JOIN products USING (product_id) GROUP BY regions.name, products.name",
+      "expected_columns": ["region_name", "product_name", "revenue"],
+      "expected_rows": [["North", "Notebook", 68.0], ["North", "Keyboard", 70.0], ["South", "Desk", 200.0], ["West", "Keyboard", 130.0]]
+    },
+    {
+      "id": "first-order-date",
+      "category": "time-filtering",
+      "question": "What was the first order date?",
+      "expected_sql": "SELECT MIN(order_date) AS first_order_date FROM orders",
+      "expected_columns": ["first_order_date"],
+      "expected_rows": [["2026-01-15"]]
+    },
+    {
+      "id": "last-order-date",
+      "category": "time-filtering",
+      "question": "What was the most recent order date?",
+      "expected_sql": "SELECT MAX(order_date) AS last_order_date FROM orders",
+      "expected_columns": ["last_order_date"],
+      "expected_rows": [["2026-04-20"]]
+    },
+    {
+      "id": "first-half-orders",
+      "category": "time-filtering",
+      "question": "How many orders were placed in the first half of 2026?",
+      "expected_sql": "SELECT COUNT(*) AS order_count FROM orders WHERE order_date >= DATE '2026-01-01' AND order_date < DATE '2026-07-01'",
+      "expected_columns": ["order_count"],
+      "expected_rows": [[4]]
+    },
+    {
+      "id": "april-revenue-by-region",
+      "category": "time-filtering",
+      "question": "What was April 2026 revenue by region? Return the region name and revenue.",
+      "expected_sql": "SELECT regions.name AS region_name, SUM(order_items.revenue) AS revenue FROM regions JOIN orders USING (region_id) JOIN order_items USING (order_id) WHERE order_date >= DATE '2026-04-01' AND order_date < DATE '2026-05-01' GROUP BY regions.name",
+      "expected_columns": ["region_name", "revenue"],
+      "expected_rows": [["North", 28.0], ["West", 130.0]]
+    },
+    {
+      "id": "orders-with-multiple-products",
+      "category": "group-by-having",
+      "question": "Which orders contain multiple distinct products? Return the order ID and product count.",
+      "expected_sql": "SELECT order_id, COUNT(DISTINCT product_id) AS product_count FROM order_items GROUP BY order_id HAVING COUNT(DISTINCT product_id) > 1",
+      "expected_columns": ["order_id", "product_count"],
+      "expected_rows": [[1, 2]]
+    },
+    {
+      "id": "categories-with-one-hundred-cost",
+      "category": "group-by-having",
+      "question": "Which product categories have at least 100 in total cost? Return the category name and cost.",
+      "expected_sql": "SELECT categories.name AS category_name, SUM(order_items.cost) AS cost FROM categories JOIN products USING (category_id) JOIN order_items USING (product_id) GROUP BY categories.name HAVING SUM(order_items.cost) >= 100",
+      "expected_columns": ["category_name", "cost"],
+      "expected_rows": [["Technology", 145.0], ["Furniture", 220.0]]
+    },
+    {
+      "id": "positive-margin-regions",
+      "category": "group-by-having",
+      "question": "Which regions have positive total gross profit? Return the region name and gross profit.",
+      "expected_sql": "SELECT regions.name AS region_name, SUM(order_items.revenue - order_items.cost) AS gross_profit FROM regions JOIN orders USING (region_id) JOIN order_items USING (order_id) GROUP BY regions.name HAVING SUM(order_items.revenue - order_items.cost) > 0",
+      "expected_columns": ["region_name", "gross_profit"],
+      "expected_rows": [["North", 36.0], ["West", 35.0]]
+    },
+    {
+      "id": "products-with-one-hundred-revenue",
+      "category": "group-by-having",
+      "question": "Which products generated between 100 and 250 in total revenue? Return the product name and revenue.",
+      "expected_sql": "SELECT products.name AS product_name, SUM(order_items.revenue) AS revenue FROM products JOIN order_items USING (product_id) GROUP BY products.name HAVING SUM(order_items.revenue) BETWEEN 100 AND 250",
+      "expected_columns": ["product_name", "revenue"],
+      "expected_rows": [["Keyboard", 200.0], ["Desk", 200.0]]
+    },
+    {
+      "id": "lowest-revenue-products",
+      "category": "nested-subquery",
+      "question": "Which products are tied for the lowest total revenue? Return every tied product name and revenue.",
+      "expected_sql": "WITH product_revenue AS (SELECT products.name AS product_name, SUM(order_items.revenue) AS revenue FROM products JOIN order_items USING (product_id) GROUP BY products.name) SELECT product_name, revenue FROM product_revenue WHERE revenue = (SELECT MIN(revenue) FROM product_revenue)",
+      "expected_columns": ["product_name", "revenue"],
+      "expected_rows": [["Notebook", 68.0]]
+    },
+    {
+      "id": "below-average-revenue-orders",
+      "category": "nested-subquery",
+      "question": "Which orders have revenue below the average order revenue? Return the order ID and revenue.",
+      "expected_sql": "WITH order_revenue AS (SELECT order_id, SUM(revenue) AS revenue FROM order_items GROUP BY order_id) SELECT order_id, revenue FROM order_revenue WHERE revenue < (SELECT AVG(revenue) FROM order_revenue)",
+      "expected_columns": ["order_id", "revenue"],
+      "expected_rows": [[1, 110.0], [4, 28.0]]
+    },
+    {
+      "id": "regions-with-most-orders",
+      "category": "nested-subquery",
+      "question": "Which regions are tied for the most orders? Return every tied region name and order count.",
+      "expected_sql": "WITH region_orders AS (SELECT regions.name AS region_name, COUNT(orders.order_id) AS order_count FROM regions JOIN orders USING (region_id) GROUP BY regions.name) SELECT region_name, order_count FROM region_orders WHERE order_count = (SELECT MAX(order_count) FROM region_orders)",
+      "expected_columns": ["region_name", "order_count"],
+      "expected_rows": [["North", 2]]
+    },
+    {
+      "id": "latest-order-regions",
+      "category": "nested-subquery",
+      "question": "Which region had the most recent order date? Return every tied region name and the order date.",
+      "expected_sql": "SELECT regions.name AS region_name, orders.order_date FROM regions JOIN orders USING (region_id) WHERE orders.order_date = (SELECT MAX(order_date) FROM orders)",
+      "expected_columns": ["region_name", "order_date"],
+      "expected_rows": [["North", "2026-04-20"]]
     }
   ]
 }

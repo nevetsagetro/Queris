@@ -39,8 +39,8 @@ def test_retail_evaluation_set_is_versioned_unique_and_covers_required_categorie
 
     assert evaluation_set.format_version == 1
     assert evaluation_set.dataset_id == "retail-v1"
-    assert len(evaluation_set.cases) == 30
-    assert len({case.id for case in evaluation_set.cases}) == 30
+    assert len(evaluation_set.cases) == 50
+    assert len({case.id for case in evaluation_set.cases}) == 50
     assert {case.category for case in evaluation_set.cases} == REQUIRED_CATEGORIES
 
 
