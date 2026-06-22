@@ -6,12 +6,12 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 ## Current focus
 
-- **Active stage:** Phase 5 — Agent Loop (`[~]`)
-- **Latest checkpoint:** added a five-case injected-failure evaluation harness and repeatable skill for the Phase 5 self-correction exit criterion.
-- **Completed work:** completed all Phase 5 implementation items and offline-validated expected-result scoring for deliberately failing initial SQL.
-- **Pending next:** run the five cases with Gemini and require at least 3/5 correct recovered results before transitioning to Phase 6.
-- **Resume point:** invoke `$queris-run-agent-loop-eval`, inspect `evals/results/agent_loop.jsonl`, and record the model plus pass/fail result; the 2026-06-21 live attempt was not started because external-tool execution was unavailable.
-- **Last updated:** 2026-06-21
+- **Active stage:** Phase 6 — Evaluation Harness (`[~]`)
+- **Latest checkpoint:** passed the Phase 5 self-correction exit evaluation with `gemini-3.5-flash`: 5/5 correct recovered results against a 3/5 threshold.
+- **Completed work:** completed all Phase 5 implementation items and live-validated bounded correction; every injected failure recovered on the first retry without exhaustion.
+- **Pending next:** define the Phase 6 evaluation-set storage contract and expand the versioned set toward 50–100 reviewed questions.
+- **Resume point:** document the evaluation-set format decision, then author the first reviewed Phase 6 question tranche with expected SQL and expected results.
+- **Last updated:** 2026-06-22
 
 ---
 
