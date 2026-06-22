@@ -2,6 +2,7 @@
 
 from itertools import permutations
 from pathlib import Path
+from time import perf_counter
 from typing import Any, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -31,6 +32,7 @@ class EvaluationOutcome(BaseModel):
     execution_succeeded: bool
     result_correct: bool
     retry_count: int = Field(ge=0)
+    latency_ms: float = Field(ge=0)
     failure_stage: FailureStage | None = None
     retries_exhausted: bool = False
     error: str | None = None
@@ -54,6 +56,8 @@ class AccuracyMetrics(BaseModel):
     execution_accuracy: float = Field(ge=0, le=1)
     result_accuracy: float = Field(ge=0, le=1)
     average_retry_count: float = Field(ge=0)
+    p50_latency_ms: float = Field(ge=0)
+    p95_latency_ms: float = Field(ge=0)
 
 
 def run_accuracy_evaluation(
@@ -67,6 +71,7 @@ def run_accuracy_evaluation(
     """Run every versioned case independently through the bounded agent loop."""
     outcomes = []
     for case in evaluation_set.cases:
+        started_at = perf_counter()
         try:
             result = run_agent_loop(
                 database_path,
@@ -77,6 +82,7 @@ def run_accuracy_evaluation(
                 max_retries=max_retries,
             )
         except Exception as error:
+            latency_ms = (perf_counter() - started_at) * 1000
             outcomes.append(
                 EvaluationOutcome(
                     case_id=case.id,
@@ -85,11 +91,13 @@ def run_accuracy_evaluation(
                     execution_succeeded=False,
                     result_correct=False,
                     retry_count=0,
+                    latency_ms=latency_ms,
                     error=f"{type(error).__name__}: {error}",
                 )
             )
             continue
 
+        latency_ms = (perf_counter() - started_at) * 1000
         execution_succeeded = result.status == "success"
         outcomes.append(
             EvaluationOutcome(
@@ -103,6 +111,7 @@ def run_accuracy_evaluation(
                 result_correct=execution_succeeded
                 and matches_evaluation_result(case, result.columns, result.rows),
                 retry_count=result.retry_count,
+                latency_ms=latency_ms,
                 failure_stage=result.failure_stage,
                 retries_exhausted=result.retries_exhausted,
                 error=result.error,
@@ -133,6 +142,7 @@ def summarize_accuracy(outcomes: tuple[EvaluationOutcome, ...]) -> AccuracyMetri
     execution_successes = sum(outcome.execution_succeeded for outcome in outcomes)
     correct_results = sum(outcome.result_correct for outcome in outcomes)
     total_retries = sum(outcome.retry_count for outcome in outcomes)
+    latencies = tuple(outcome.latency_ms for outcome in outcomes)
     return AccuracyMetrics(
         total=total,
         execution_successes=execution_successes,
@@ -141,4 +151,17 @@ def summarize_accuracy(outcomes: tuple[EvaluationOutcome, ...]) -> AccuracyMetri
         execution_accuracy=execution_successes / total if total else 0,
         result_accuracy=correct_results / total if total else 0,
         average_retry_count=total_retries / total if total else 0,
+        p50_latency_ms=_percentile(latencies, 0.50),
+        p95_latency_ms=_percentile(latencies, 0.95),
     )
+
+
+def _percentile(values: tuple[float, ...], quantile: float) -> float:
+    if not values:
+        return 0
+    ordered = sorted(values)
+    position = (len(ordered) - 1) * quantile
+    lower_index = int(position)
+    upper_index = min(lower_index + 1, len(ordered) - 1)
+    weight = position - lower_index
+    return ordered[lower_index] + (ordered[upper_index] - ordered[lower_index]) * weight
