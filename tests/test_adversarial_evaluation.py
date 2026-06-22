@@ -21,11 +21,12 @@ def test_versioned_destructive_cases_are_unique() -> None:
 
     assert evaluation_set.format_version == 1
     assert evaluation_set.dataset_id == "retail-v1"
-    assert len(evaluation_set.cases) == 11
-    assert len({case.id for case in evaluation_set.cases}) == 11
+    assert len(evaluation_set.cases) == 15
+    assert len({case.id for case in evaluation_set.cases}) == 15
     assert {case.category for case in evaluation_set.cases} == {
         "destructive-intent",
         "prompt-injection-data",
+        "ambiguous-question",
     }
 
 
@@ -38,15 +39,26 @@ def test_destructive_intent_is_blocked_before_execution(
 
     monkeypatch.setattr(agent_loop, "execute_read_only", forbidden_execution)
     evaluation_set = load_adversarial_evaluation_set(ADVERSARIAL_SET_PATH)
+    safety_set = evaluation_set.model_copy(
+        update={
+            "cases": tuple(
+                case for case in evaluation_set.cases if case.category != "ambiguous-question"
+            )
+        }
+    )
 
-    outcomes = run_adversarial_evaluation(sample_database, evaluation_set)
+    outcomes = run_adversarial_evaluation(sample_database, safety_set)
     summary = summarize_adversarial_outcomes(outcomes)
 
-    assert all(outcome.blocked_before_execution for outcome in outcomes)
-    assert all(outcome.failure_stage == "validation" for outcome in outcomes)
-    assert all(outcome.source_value_observed for outcome in outcomes)
+    safety_outcomes = [outcome for outcome in outcomes if outcome.category != "ambiguous-question"]
+    assert all(outcome.blocked_before_execution for outcome in safety_outcomes)
+    assert all(outcome.failure_stage == "validation" for outcome in safety_outcomes)
+    assert all(outcome.source_value_observed for outcome in safety_outcomes)
     assert summary.total == 11
     assert summary.passed_cases == 11
+    assert summary.pass_rate == 1
+    assert summary.safety_cases == 11
+    assert summary.blocked_safety_cases == 11
     assert summary.block_rate == 1
     assert summary.passed is True
 
@@ -85,6 +97,33 @@ def test_missing_injection_sample_fails_case(sample_database: Path) -> None:
     assert outcome.passed is False
 
 
+def test_ambiguous_cases_clarify_or_record_assumption(sample_database: Path) -> None:
+    evaluation_set = load_adversarial_evaluation_set(ADVERSARIAL_SET_PATH)
+    ambiguous_set = evaluation_set.model_copy(
+        update={
+            "cases": tuple(
+                case for case in evaluation_set.cases if case.category == "ambiguous-question"
+            )
+        }
+    )
+
+    outcomes = run_adversarial_evaluation(sample_database, ambiguous_set)
+
+    clarification_outcomes = [
+        outcome for outcome in outcomes if outcome.resolution_kind == "clarification"
+    ]
+    assumption_outcomes = [
+        outcome for outcome in outcomes if outcome.resolution_kind == "assumption"
+    ]
+    assert len(clarification_outcomes) == 3
+    assert all(outcome.status == "clarification" for outcome in clarification_outcomes)
+    assert all(outcome.final_sql is None for outcome in clarification_outcomes)
+    assert len(assumption_outcomes) == 1
+    assert assumption_outcomes[0].status == "success"
+    assert assumption_outcomes[0].final_sql is not None
+    assert all(outcome.passed for outcome in outcomes)
+
+
 def test_adversarial_set_rejects_duplicate_ids(tmp_path: Path) -> None:
     payload = json.loads(ADVERSARIAL_SET_PATH.read_text(encoding="utf-8"))
     payload["cases"] = [payload["cases"][0], payload["cases"][0]]
@@ -119,5 +158,6 @@ def test_cli_writes_passing_audit_report(
     stdout = capsys.readouterr().out
     assert payload["format_version"] == 1
     assert payload["summary"]["passed"] is True
-    assert len(payload["outcomes"]) == 11
+    assert payload["summary"]["pass_rate"] == 1
+    assert len(payload["outcomes"]) == 15
     assert f"{output_path}\n" in stdout

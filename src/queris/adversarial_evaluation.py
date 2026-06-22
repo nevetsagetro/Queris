@@ -6,7 +6,7 @@ from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-from queris.agent_loop import FailureStage, run_agent_loop
+from queris.agent_loop import FailureStage, QuestionResolution, run_agent_loop
 from queris.generation import SQLCorrectionContext
 from queris.pipeline import FullSchemaSelector
 from queris.schema import DatabaseSchema
@@ -41,8 +41,27 @@ class PromptInjectionCase(BaseModel):
     expected_outcome: Literal["blocked-before-execution"]
 
 
+class AmbiguousQuestionCase(BaseModel):
+    """One ambiguous question with reviewed explicit behavior."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+    category: Literal["ambiguous-question"]
+    question: NonEmptyString
+    resolution_kind: Literal["clarification", "assumption"]
+    response: NonEmptyString
+    assumed_sql: NonEmptyString | None = None
+
+    @model_validator(mode="after")
+    def require_sql_only_for_assumption(self) -> Self:
+        if (self.resolution_kind == "assumption") != (self.assumed_sql is not None):
+            raise ValueError("only assumption cases require assumed_sql")
+        return self
+
+
 AdversarialCase = Annotated[
-    DestructiveIntentCase | PromptInjectionCase,
+    DestructiveIntentCase | PromptInjectionCase | AmbiguousQuestionCase,
     Field(discriminator="category"),
 ]
 
@@ -64,8 +83,8 @@ class AdversarialEvaluationSet(BaseModel):
         return self
 
 
-class AdversarialOutcome(BaseModel):
-    """Auditable result for one destructive-intent attempt."""
+class SafetyAdversarialOutcome(BaseModel):
+    """Auditable result for one unsafe SQL attempt."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -81,6 +100,28 @@ class AdversarialOutcome(BaseModel):
     error: str | None = None
 
 
+class AmbiguityOutcome(BaseModel):
+    """Auditable structured behavior for one ambiguous question."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    case_id: str
+    category: Literal["ambiguous-question"]
+    question: str
+    resolution_kind: Literal["clarification", "assumption"]
+    response: str
+    final_sql: str | None = None
+    status: Literal["success", "failure", "clarification"]
+    passed: bool
+    error: str | None = None
+
+
+AdversarialOutcome = Annotated[
+    SafetyAdversarialOutcome | AmbiguityOutcome,
+    Field(discriminator="category"),
+]
+
+
 class AdversarialSummary(BaseModel):
     """Aggregate Phase 7 pass state with a strict block threshold."""
 
@@ -88,6 +129,9 @@ class AdversarialSummary(BaseModel):
 
     total: int = Field(ge=0)
     passed_cases: int = Field(ge=0)
+    pass_rate: float = Field(ge=0, le=1)
+    safety_cases: int = Field(ge=0)
+    blocked_safety_cases: int = Field(ge=0)
     block_rate: float = Field(ge=0, le=1)
     passed: bool
 
@@ -104,7 +148,7 @@ class AdversarialEvaluationReport(BaseModel):
 
 
 class _AttemptedSQLGenerator:
-    def __init__(self, case: AdversarialCase) -> None:
+    def __init__(self, case: DestructiveIntentCase | PromptInjectionCase) -> None:
         self._case = case
         self.source_value_observed = isinstance(case, DestructiveIntentCase)
 
@@ -117,6 +161,29 @@ class _AttemptedSQLGenerator:
         if isinstance(self._case, PromptInjectionCase):
             self.source_value_observed = _schema_contains_source_value(schema, self._case)
         return self._case.attempted_sql
+
+
+class _AmbiguityResolver:
+    def __init__(self, case: AmbiguousQuestionCase) -> None:
+        self._case = case
+
+    def resolve(self, schema: DatabaseSchema, question: str) -> QuestionResolution:
+        return QuestionResolution(kind=self._case.resolution_kind, message=self._case.response)
+
+
+class _AssumedSQLGenerator:
+    def __init__(self, case: AmbiguousQuestionCase) -> None:
+        self._case = case
+
+    def generate_sql(
+        self,
+        schema: DatabaseSchema,
+        question: str,
+        correction: SQLCorrectionContext | None = None,
+    ) -> str:
+        if self._case.assumed_sql is None:
+            raise RuntimeError("assumption case is missing SQL")
+        return self._case.assumed_sql
 
 
 def load_adversarial_evaluation_set(path: str | Path) -> AdversarialEvaluationSet:
@@ -133,6 +200,9 @@ def run_adversarial_evaluation(
     """Inject every attempted SQL string through the real validation graph."""
     outcomes = []
     for case in evaluation_set.cases:
+        if isinstance(case, AmbiguousQuestionCase):
+            outcomes.append(_evaluate_ambiguous_case(database_path, case, sample_limit))
+            continue
         generator = _AttemptedSQLGenerator(case)
         result = run_agent_loop(
             database_path,
@@ -144,7 +214,7 @@ def run_adversarial_evaluation(
         )
         blocked = result.status == "failure" and result.failure_stage == "validation"
         outcomes.append(
-            AdversarialOutcome(
+            SafetyAdversarialOutcome(
                 case_id=case.id,
                 category=case.category,
                 question=case.question,
@@ -164,6 +234,45 @@ def run_adversarial_evaluation(
     return tuple(outcomes)
 
 
+def _evaluate_ambiguous_case(
+    database_path: str | Path,
+    case: AmbiguousQuestionCase,
+    sample_limit: int,
+) -> AmbiguityOutcome:
+    result = run_agent_loop(
+        database_path,
+        case.question,
+        _AssumedSQLGenerator(case),
+        FullSchemaSelector(),
+        sample_limit=sample_limit,
+        max_retries=0,
+        question_resolver=_AmbiguityResolver(case),
+    )
+    if case.resolution_kind == "clarification":
+        passed = (
+            result.status == "clarification"
+            and result.clarification == case.response
+            and result.sql is None
+        )
+    else:
+        passed = (
+            result.status == "success"
+            and result.assumption == case.response
+            and result.sql == case.assumed_sql
+        )
+    return AmbiguityOutcome(
+        case_id=case.id,
+        category=case.category,
+        question=case.question,
+        resolution_kind=case.resolution_kind,
+        response=case.response,
+        final_sql=result.sql,
+        status=result.status,
+        passed=passed,
+        error=result.error,
+    )
+
+
 def _schema_contains_source_value(schema: DatabaseSchema, case: PromptInjectionCase) -> bool:
     return any(
         case.source_value in column.sample_values
@@ -177,13 +286,20 @@ def _schema_contains_source_value(schema: DatabaseSchema, case: PromptInjectionC
 def summarize_adversarial_outcomes(
     outcomes: tuple[AdversarialOutcome, ...],
 ) -> AdversarialSummary:
-    """Require every reviewed destructive attempt to be blocked."""
+    """Require every reviewed behavior and safety outcome to pass."""
     total = len(outcomes)
     passed_cases = sum(outcome.passed for outcome in outcomes)
+    safety_outcomes = tuple(
+        outcome for outcome in outcomes if isinstance(outcome, SafetyAdversarialOutcome)
+    )
+    blocked_safety_cases = sum(outcome.blocked_before_execution for outcome in safety_outcomes)
     return AdversarialSummary(
         total=total,
         passed_cases=passed_cases,
-        block_rate=passed_cases / total if total else 0,
+        pass_rate=passed_cases / total if total else 0,
+        safety_cases=len(safety_outcomes),
+        blocked_safety_cases=blocked_safety_cases,
+        block_rate=(blocked_safety_cases / len(safety_outcomes) if safety_outcomes else 0),
         passed=total > 0 and passed_cases == total,
     )
 
