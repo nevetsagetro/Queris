@@ -161,6 +161,9 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Phase 10 — Stretch Goals (optional, post-portfolio-ready)
 - [ ] React/TypeScript frontend replacing/complementing Streamlit
 - [ ] Multi-dataset support (schema switch at runtime)
+- [ ] Voice question input through Whisper-compatible speech-to-text, feeding the transcript into the existing validated natural-language query pipeline
+- [ ] Pluggable database-engine adapters, starting with PostgreSQL and preserving dialect-aware SQL validation plus read-only execution boundaries
+- [ ] Evaluate other widely used engines such as MySQL, BigQuery, or Snowflake based on deployment demand and measured compatibility
 - [ ] Side-by-side comparison of multiple LLMs on the same eval set (accuracy vs cost vs latency)
 - [ ] Cost/latency dashboard over historical eval runs
 - [ ] Natural-language follow-up questions (conversational context across queries)
