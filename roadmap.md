@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 5 — Agent Loop (`[~]`)
-- **Latest checkpoint:** added structured retry counts to successful, recovered, and exhausted agent results.
-- **Completed work:** completed all Phase 5 implementation checklist items with bounded correction, graceful exhaustion, and retry metrics.
-- **Pending next:** merge the retry-metrics branch and validate the Phase 5 exit criterion before transitioning to Phase 6.
-- **Resume point:** after `feat/agent-retry-metrics` merges, exercise deliberately malformed-prone questions through the live agent loop and record whether a majority self-correct within the cap.
+- **Latest checkpoint:** added a five-case injected-failure evaluation harness and repeatable skill for the Phase 5 self-correction exit criterion.
+- **Completed work:** completed all Phase 5 implementation items and offline-validated expected-result scoring for deliberately failing initial SQL.
+- **Pending next:** run the five cases with Gemini and require at least 3/5 correct recovered results before transitioning to Phase 6.
+- **Resume point:** invoke `$queris-run-agent-loop-eval`, inspect `evals/results/agent_loop.jsonl`, and record the model plus pass/fail result; the 2026-06-21 live attempt was not started because external-tool execution was unavailable.
 - **Last updated:** 2026-06-21
 
 ---
