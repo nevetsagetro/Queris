@@ -46,6 +46,18 @@ class MixedGenerator(ReferenceGenerator):
         return self._sql_by_question[question]
 
 
+class OneRetryGenerator(ReferenceGenerator):
+    def generate_sql(
+        self,
+        schema: DatabaseSchema,
+        question: str,
+        correction: SQLCorrectionContext | None = None,
+    ) -> str:
+        if correction is None:
+            return "SELECT * FROM missing_table"
+        return super().generate_sql(schema, question, correction)
+
+
 def _subset(evaluation_set: EvaluationSet, count: int) -> EvaluationSet:
     return evaluation_set.model_copy(update={"cases": evaluation_set.cases[:count]})
 
@@ -64,8 +76,10 @@ def test_reference_queries_produce_perfect_accuracy(sample_database: Path) -> No
     assert metrics.total == 3
     assert metrics.execution_successes == 3
     assert metrics.correct_results == 3
+    assert metrics.total_retries == 0
     assert metrics.execution_accuracy == 1
     assert metrics.result_accuracy == 1
+    assert metrics.average_retry_count == 0
     assert all(outcome.retry_count == 0 for outcome in outcomes)
 
 
@@ -89,6 +103,24 @@ def test_accuracy_distinguishes_wrong_results_from_failed_execution(
     assert outcomes[2].retries_exhausted is True
     assert metrics.execution_accuracy == pytest.approx(2 / 3)
     assert metrics.result_accuracy == pytest.approx(1 / 3)
+
+
+def test_retry_metrics_include_recovered_execution(sample_database: Path) -> None:
+    evaluation_set = _subset(load_evaluation_set(EVALUATION_SET_PATH), 1)
+
+    outcomes = run_accuracy_evaluation(
+        sample_database,
+        evaluation_set,
+        OneRetryGenerator(evaluation_set),
+        sample_limit=0,
+    )
+    metrics = summarize_accuracy(outcomes)
+
+    assert outcomes[0].execution_succeeded is True
+    assert outcomes[0].result_correct is True
+    assert outcomes[0].retry_count == 1
+    assert metrics.total_retries == 1
+    assert metrics.average_retry_count == 1
 
 
 def test_result_matching_allows_row_and_column_reordering() -> None:
@@ -119,8 +151,10 @@ def test_summary_handles_no_attempted_cases() -> None:
     metrics = summarize_accuracy(())
 
     assert metrics.total == 0
+    assert metrics.total_retries == 0
     assert metrics.execution_accuracy == 0
     assert metrics.result_accuracy == 0
+    assert metrics.average_retry_count == 0
 
 
 def test_correct_result_requires_successful_execution() -> None:

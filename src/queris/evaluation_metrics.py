@@ -50,8 +50,10 @@ class AccuracyMetrics(BaseModel):
     total: int = Field(ge=0)
     execution_successes: int = Field(ge=0)
     correct_results: int = Field(ge=0)
+    total_retries: int = Field(ge=0)
     execution_accuracy: float = Field(ge=0, le=1)
     result_accuracy: float = Field(ge=0, le=1)
+    average_retry_count: float = Field(ge=0)
 
 
 def run_accuracy_evaluation(
@@ -130,10 +132,13 @@ def summarize_accuracy(outcomes: tuple[EvaluationOutcome, ...]) -> AccuracyMetri
     total = len(outcomes)
     execution_successes = sum(outcome.execution_succeeded for outcome in outcomes)
     correct_results = sum(outcome.result_correct for outcome in outcomes)
+    total_retries = sum(outcome.retry_count for outcome in outcomes)
     return AccuracyMetrics(
         total=total,
         execution_successes=execution_successes,
         correct_results=correct_results,
+        total_retries=total_retries,
         execution_accuracy=execution_successes / total if total else 0,
         result_accuracy=correct_results / total if total else 0,
+        average_retry_count=total_retries / total if total else 0,
     )
