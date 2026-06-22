@@ -12,13 +12,15 @@ the same validation graph used at runtime.
 
 ## Decision
 
-Store reviewed Phase 7 cases as a versioned JSON document under `evals/`. Each destructive-intent
-case contains a stable ID, natural-language question, worst-case generated SQL attempt, and explicit
-`blocked-before-execution` expectation. Validate the document with immutable Pydantic models that
-reject unknown fields, unsupported versions, empty values, and duplicate IDs.
+Store reviewed Phase 7 cases as a versioned JSON document under `evals/`. Each case contains a stable
+ID, natural-language question, worst-case generated SQL attempt, and explicit
+`blocked-before-execution` expectation. Prompt-injection cases also identify the source table,
+column, and exact untrusted sample value. Validate the document with immutable discriminated
+Pydantic models that reject unknown fields, unsupported versions, empty values, and duplicate IDs.
 
 Run each SQL attempt through the real agent loop with zero retries and require a validation-stage
-failure. Tests replace the execution node with a failing sentinel to prove reviewed destructive SQL
+failure. Injection cases additionally require the source value to be observed in the schema supplied
+to generation. Tests replace the execution node with a failing sentinel to prove reviewed unsafe SQL
 never reaches it. The command exits unsuccessfully unless every case passes. Generated audit reports
 remain under ignored `evals/results/` paths.
 

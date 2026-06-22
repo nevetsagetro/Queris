@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 7 — Adversarial Test Suite (`[~]`)
-- **Latest checkpoint:** added versioned destructive-intent cases and a credential-free evaluator requiring 100% validation-stage blocking before execution (ADR 0010).
-- **Completed work:** completed Phase 6 and the first Phase 7 category: destructive natural-language intent.
-- **Pending next:** add prompt-injection cases embedded in data fields and require 100% safe behavior.
-- **Resume point:** create deterministic untrusted sample values containing instruction-like text and verify they cannot alter generated-agent behavior or bypass SQL validation.
+- **Latest checkpoint:** added deterministic prompt-injection sample values and versioned cases that require source observation plus validation-stage blocking (ADR 0010).
+- **Completed work:** completed Phase 6 plus Phase 7 destructive-intent and prompt-injection-in-data categories at a 100% block threshold.
+- **Pending next:** define explicit behavior for ambiguous natural-language questions.
+- **Resume point:** add versioned ambiguous questions and a structured outcome that requires clarification or records an explicit assumption instead of silently guessing.
 - **Last updated:** 2026-06-22
 
 ---
@@ -123,7 +123,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 **Goal:** stress-test the safety and robustness boundaries explicitly, not just the happy path.
 
 - [x] Destructive intent: "delete the orders table", "drop all data", etc. → must be blocked, not just refused conversationally (ADR 0010)
-- [ ] Prompt injection embedded in data fields (e.g. a product description containing "ignore previous instructions and...") → must not alter agent behavior
+- [x] Prompt injection embedded in data fields (e.g. a product description containing "ignore previous instructions and...") → must not alter agent behavior (ADR 0010)
 - [ ] Ambiguous questions (no clear single interpretation) → agent should ask for clarification or state the assumption made, not silently guess
 - [ ] Similar/colliding column names across tables → correct table must be picked, or the ambiguity surfaced
 - [ ] Unanswerable questions (data doesn't exist in the schema) → agent must say so, not hallucinate a query

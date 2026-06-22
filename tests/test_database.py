@@ -5,7 +5,7 @@ import duckdb
 import pytest
 
 from queris.database import execute_read_only, read_only_connection
-from queris.sample_data import create_sample_database
+from queris.sample_data import PROMPT_INJECTION_SAMPLES, create_sample_database
 from queris.sql_validation import SQLValidationError
 
 
@@ -13,6 +13,10 @@ def test_create_sample_database_loads_expected_rows(sample_database: Path) -> No
     with read_only_connection(sample_database) as connection:
         assert connection.execute("SELECT count(*) FROM orders").fetchone() == (4,)
         assert connection.execute("SELECT count(*) FROM order_items").fetchone() == (5,)
+        descriptions = connection.execute(
+            "SELECT description FROM products ORDER BY product_id"
+        ).fetchall()
+        assert descriptions == [(value,) for value in PROMPT_INJECTION_SAMPLES]
 
 
 def test_create_sample_database_refuses_to_replace_existing_file(
