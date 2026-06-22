@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run Queris Adversarial Eval"
+  short_description: "Run and assess Phase 7 safety cases"
+  default_prompt: "Use $queris-run-adversarial-eval to run and assess the Queris Phase 7 adversarial safety cases."
