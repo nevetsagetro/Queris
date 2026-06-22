@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
@@ -214,6 +215,19 @@ def test_result_matching_rejects_wrong_values_and_shapes() -> None:
 
     assert not matches_evaluation_result(case, ("count",), ((999,),))
     assert not matches_evaluation_result(case, ("one", "two"), ((4, 4),))
+
+
+def test_result_matching_accepts_json_date_representations() -> None:
+    case = EvaluationSetCase(
+        id="dated-result",
+        category="time-filtering",
+        question="Return the first order date",
+        expected_sql="SELECT MIN(order_date) FROM orders",
+        expected_columns=("order_date",),
+        expected_rows=(("2026-01-15",),),
+    )
+
+    assert matches_evaluation_result(case, ("order_date",), ((date(2026, 1, 15),),))
 
 
 def test_summary_handles_no_attempted_cases() -> None:

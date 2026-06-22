@@ -28,5 +28,5 @@ def _normalize_value(value: Any) -> NormalizedValue:
     if isinstance(value, (Decimal, int, float)):
         return ("number", Decimal(str(value)).normalize())
     if isinstance(value, (date, datetime)):
-        return ("date", value.isoformat())
+        return ("literal", value.isoformat())
     return ("literal", value)

@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 6 — Evaluation Harness (`[~]`)
-- **Latest checkpoint:** added provider-neutral token usage, cumulative Gemini metadata capture, per-case usage deltas, and explicit-rate estimated USD cost.
-- **Completed work:** completed the 50-case set and all planned Phase 6 metrics: execution, result, unsafe-query, retry, latency, token, and cost.
-- **Pending next:** build the one-command Phase 6 CLI and emit a human-readable table plus structured JSON report.
-- **Resume point:** compose accuracy and safety outcomes into a versioned report model, write table/JSON outputs, and register the full evaluation CLI.
+- **Latest checkpoint:** added the one-command Phase 6 evaluation CLI with a human-readable metric table and versioned JSON audit report.
+- **Completed work:** completed the 50-case set, all planned Phase 6 metrics, and the full evaluation report command.
+- **Pending next:** store historical evaluation runs so regressions are visible over time.
+- **Resume point:** define the local historical-run layout and regression comparison contract around versioned Phase 6 JSON reports.
 - **Last updated:** 2026-06-22
 
 ---
@@ -112,7 +112,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
   - [x] Average number of retries (from Phase 5)
   - [x] Latency per query (p50/p95)
   - [x] Token/cost per query
-- [ ] Build a CLI/script to run the full eval set and output a report (table + JSON)
+- [x] Build a CLI/script to run the full eval set and output a report (table + JSON)
 - [ ] Store historical eval runs so regressions are visible over time
 
 **Exit criteria:** running one command produces a full metrics report against the 50–100 question set.

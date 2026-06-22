@@ -28,6 +28,7 @@ Create a virtual environment and install the package with development tools usin
 - `queris-wide-data data/wide.duckdb`: create the deterministic 32-table ambiguous-schema fixture.
 - `queris-retrieval-eval data/wide.duckdb metadata/wide-schema.v1.yaml evals/wide_schema_retrieval.json --top-k 5`: compare raw and enriched retrieval offline.
 - `queris-agent-eval data/retail.duckdb`: run the five-case Phase 5 self-correction exit evaluation.
+- `queris-evaluation-report data/retail.duckdb`: run the full Phase 6 evaluation and write a table plus JSON report.
 - `queris-eval data/retail.duckdb`: run the versioned 10-question baseline and write ignored local JSONL results.
 
 ## Coding Style & Naming Conventions
