@@ -79,6 +79,7 @@ Export `GEMINI_API_KEY`, create the retail fixture, and run the full evaluation 
 queris-evaluation-report data/retail.duckdb
 ```
 
-The command prints a metric table and writes the full auditable JSON report to
-`evals/results/phase6.json`. Pass both `--input-usd-per-million` and
-`--output-usd-per-million` to include an explicit-rate cost estimate.
+The command prints the current metric table plus a compatible prior-run comparison, writes the
+latest full report to `evals/results/phase6.json`, and appends a timestamped report under
+`evals/results/phase6-history/`. Both locations are ignored local audit artifacts. Pass both
+`--input-usd-per-million` and `--output-usd-per-million` to include an explicit-rate cost estimate.

@@ -6,7 +6,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import AwareDatetime, BaseModel, ConfigDict
 
 from queris.agent_loop import DEFAULT_MAX_RETRIES
 from queris.evaluation_metrics import (
@@ -32,7 +32,7 @@ class EvaluationReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     format_version: Literal[1] = 1
-    generated_at: datetime
+    generated_at: AwareDatetime
     dataset_id: str
     fixture: str
     accuracy: AccuracyMetrics
@@ -116,6 +116,12 @@ def _build_parser() -> argparse.ArgumentParser:
         default=Path("evals/results/phase6.json"),
         help="Ignored local structured JSON report",
     )
+    parser.add_argument(
+        "--history-dir",
+        type=Path,
+        default=Path("evals/results/phase6-history"),
+        help="Ignored local directory of timestamped reports",
+    )
     parser.add_argument("--samples", type=int, default=3, help="Sample values per column")
     parser.add_argument(
         "--max-retries",
@@ -155,6 +161,13 @@ def _pricing_from_args(
 
 
 def main() -> None:
+    from queris.evaluation_history import (
+        compare_evaluation_reports,
+        format_comparison_table,
+        load_latest_compatible_report,
+        write_historical_report,
+    )
+
     parser = _build_parser()
     args = parser.parse_args()
     pricing = _pricing_from_args(
@@ -173,9 +186,18 @@ def main() -> None:
     )
     unsafe_query_outcomes = evaluate_unsafe_queries()
     report = compose_evaluation_report(evaluation_set, outcomes, unsafe_query_outcomes)
+    previous_report = load_latest_compatible_report(args.history_dir, report)
+    history_path = write_historical_report(args.history_dir, report)
     output_path = write_evaluation_report(args.output, report)
     print(format_evaluation_table(report))
+    if previous_report is None:
+        print("Historical comparison: no compatible previous report")
+    else:
+        comparison = compare_evaluation_reports(previous_report, report)
+        print(f"Compared with: {comparison.previous_generated_at}")
+        print(format_comparison_table(comparison))
     print(f"JSON report: {output_path}")
+    print(f"Historical report: {history_path}")
 
 
 if __name__ == "__main__":
