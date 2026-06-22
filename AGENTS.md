@@ -6,6 +6,10 @@ Queris has completed its safe DuckDB core and schema introspection. `README.md` 
 
 In a fresh session, invoke `$queris-resume-work` to recover context and follow the branch, validation, commit, push-before-transition, and checkpoint workflow.
 
+Invoke `$queris-start-next-phase` explicitly to verify that the phase-completing pull request is
+reviewed and merged, update `main`, create the next focused branch, and begin the next phase. This
+skill does not run implicitly.
+
 Invoke `$queris-run-baseline-eval` when rerunning or recording the versioned text-to-SQL baseline, or when investigating a live evaluation failure.
 
 Invoke `$queris-run-agent-loop-eval` when running or recording the Phase 5 self-correction exit evaluation, checking its 3/5 threshold, or investigating a correction failure.
