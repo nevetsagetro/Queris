@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 6 — Evaluation Harness (`[~]`)
-- **Latest checkpoint:** expanded the reviewed `retail-v1` evaluation set from 15 to 30 questions with deeper join, date-boundary, HAVING, and nested-aggregate coverage.
-- **Completed work:** completed Phase 5, selected versioned JSON in ADR 0008, and reference-validated 30 Phase 6 questions across every required query category.
-- **Pending next:** expand `evals/retail_v1.json` from 30 to at least 50 reviewed questions while preserving deterministic reference-result validation.
-- **Resume point:** author the final 20-question minimum expansion tranche, then mark the 50–100-question roadmap item complete and begin execution/result metrics.
+- **Latest checkpoint:** completed the 50-question `retail-v1` evaluation set with reviewed reference SQL and deterministic expected results across all required query categories.
+- **Completed work:** completed Phase 5, selected versioned JSON in ADR 0008, and satisfied the Phase 6 question-authoring target at its 50-case minimum.
+- **Pending next:** implement execution accuracy and result accuracy metrics against the versioned Phase 6 set.
+- **Resume point:** add structured per-case execution and result outcomes plus aggregate accuracy metrics, reusing order-insensitive result normalization.
 - **Last updated:** 2026-06-22
 
 ---
@@ -103,7 +103,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Phase 6 — Evaluation Harness
 **Goal:** the project's actual differentiator. Without this, it's "just another demo."
 
-- [ ] Author 50–100 questions with expected SQL and expected result, covering: simple aggregation, multi-table joins, time filtering, group-by + having, nested subqueries
+- [x] Author 50–100 questions with expected SQL and expected result, covering: simple aggregation, multi-table joins, time filtering, group-by + having, nested subqueries
 - [x] Decide and document the storage format: versioned JSON (ADR 0008)
 - [ ] Implement metrics:
   - [ ] Execution accuracy (did it run without error?)
