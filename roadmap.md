@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 6 — Evaluation Harness (`[~]`)
-- **Latest checkpoint:** completed the 50-question `retail-v1` evaluation set with reviewed reference SQL and deterministic expected results across all required query categories.
-- **Completed work:** completed Phase 5, selected versioned JSON in ADR 0008, and satisfied the Phase 6 question-authoring target at its 50-case minimum.
-- **Pending next:** implement execution accuracy and result accuracy metrics against the versioned Phase 6 set.
-- **Resume point:** add structured per-case execution and result outcomes plus aggregate accuracy metrics, reusing order-insensitive result normalization.
+- **Latest checkpoint:** added structured per-case outcomes plus aggregate execution and result accuracy for the 50-question Phase 6 set.
+- **Completed work:** completed Phase 5, the 50-case versioned evaluation set, and Phase 6 execution/result accuracy with row- and column-order-insensitive matching.
+- **Pending next:** implement blocked-unsafe-query rate using the existing SQL safety fixtures.
+- **Resume point:** define auditable unsafe-query outcomes and aggregate the proportion blocked before DuckDB execution, then integrate retry metrics.
 - **Last updated:** 2026-06-22
 
 ---
@@ -106,8 +106,8 @@ This is the source of truth for pending decisions, delivery order, and progress.
 - [x] Author 50–100 questions with expected SQL and expected result, covering: simple aggregation, multi-table joins, time filtering, group-by + having, nested subqueries
 - [x] Decide and document the storage format: versioned JSON (ADR 0008)
 - [ ] Implement metrics:
-  - [ ] Execution accuracy (did it run without error?)
-  - [ ] Result accuracy (does the output match expected, allowing for row/column order differences?)
+  - [x] Execution accuracy (did it run without error?)
+  - [x] Result accuracy (does the output match expected, allowing for row/column order differences?)
   - [ ] Blocked-unsafe-query rate (from the safety test suite)
   - [ ] Average number of retries (from Phase 5)
   - [ ] Latency per query (p50/p95)
