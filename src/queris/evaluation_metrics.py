@@ -1,5 +1,6 @@
 """Execution and result accuracy metrics for versioned evaluation sets."""
 
+from decimal import Decimal
 from itertools import permutations
 from pathlib import Path
 from time import perf_counter
@@ -16,6 +17,7 @@ from queris.agent_loop import (
 from queris.evaluation_set import EvaluationCategory, EvaluationSet, EvaluationSetCase
 from queris.pipeline import FullSchemaSelector
 from queris.result_matching import rows_match
+from queris.usage import GenerationUsage, TokenPricing
 
 
 class EvaluationOutcome(BaseModel):
@@ -33,6 +35,8 @@ class EvaluationOutcome(BaseModel):
     result_correct: bool
     retry_count: int = Field(ge=0)
     latency_ms: float = Field(ge=0)
+    usage: GenerationUsage = Field(default_factory=GenerationUsage)
+    estimated_cost_usd: Decimal | None = Field(default=None, ge=0)
     failure_stage: FailureStage | None = None
     retries_exhausted: bool = False
     error: str | None = None
@@ -58,6 +62,10 @@ class AccuracyMetrics(BaseModel):
     average_retry_count: float = Field(ge=0)
     p50_latency_ms: float = Field(ge=0)
     p95_latency_ms: float = Field(ge=0)
+    input_tokens: int = Field(ge=0)
+    output_tokens: int = Field(ge=0)
+    total_tokens: int = Field(ge=0)
+    estimated_cost_usd: Decimal | None = Field(default=None, ge=0)
 
 
 def run_accuracy_evaluation(
@@ -67,10 +75,12 @@ def run_accuracy_evaluation(
     *,
     sample_limit: int = 3,
     max_retries: int = DEFAULT_MAX_RETRIES,
+    pricing: TokenPricing | None = None,
 ) -> tuple[EvaluationOutcome, ...]:
     """Run every versioned case independently through the bounded agent loop."""
     outcomes = []
     for case in evaluation_set.cases:
+        usage_before = _usage_snapshot(generator)
         started_at = perf_counter()
         try:
             result = run_agent_loop(
@@ -83,6 +93,7 @@ def run_accuracy_evaluation(
             )
         except Exception as error:
             latency_ms = (perf_counter() - started_at) * 1000
+            usage = _usage_snapshot(generator) - usage_before
             outcomes.append(
                 EvaluationOutcome(
                     case_id=case.id,
@@ -92,12 +103,15 @@ def run_accuracy_evaluation(
                     result_correct=False,
                     retry_count=0,
                     latency_ms=latency_ms,
+                    usage=usage,
+                    estimated_cost_usd=pricing.estimate_cost(usage) if pricing else None,
                     error=f"{type(error).__name__}: {error}",
                 )
             )
             continue
 
         latency_ms = (perf_counter() - started_at) * 1000
+        usage = _usage_snapshot(generator) - usage_before
         execution_succeeded = result.status == "success"
         outcomes.append(
             EvaluationOutcome(
@@ -112,6 +126,8 @@ def run_accuracy_evaluation(
                 and matches_evaluation_result(case, result.columns, result.rows),
                 retry_count=result.retry_count,
                 latency_ms=latency_ms,
+                usage=usage,
+                estimated_cost_usd=pricing.estimate_cost(usage) if pricing else None,
                 failure_stage=result.failure_stage,
                 retries_exhausted=result.retries_exhausted,
                 error=result.error,
@@ -143,6 +159,8 @@ def summarize_accuracy(outcomes: tuple[EvaluationOutcome, ...]) -> AccuracyMetri
     correct_results = sum(outcome.result_correct for outcome in outcomes)
     total_retries = sum(outcome.retry_count for outcome in outcomes)
     latencies = tuple(outcome.latency_ms for outcome in outcomes)
+    usage = sum((outcome.usage for outcome in outcomes), start=GenerationUsage())
+    costs = tuple(outcome.estimated_cost_usd for outcome in outcomes)
     return AccuracyMetrics(
         total=total,
         execution_successes=execution_successes,
@@ -153,6 +171,14 @@ def summarize_accuracy(outcomes: tuple[EvaluationOutcome, ...]) -> AccuracyMetri
         average_retry_count=total_retries / total if total else 0,
         p50_latency_ms=_percentile(latencies, 0.50),
         p95_latency_ms=_percentile(latencies, 0.95),
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
+        total_tokens=usage.total_tokens,
+        estimated_cost_usd=(
+            sum((cost for cost in costs if cost is not None), start=Decimal(0))
+            if costs and all(cost is not None for cost in costs)
+            else None
+        ),
     )
 
 
@@ -165,3 +191,13 @@ def _percentile(values: tuple[float, ...], quantile: float) -> float:
     upper_index = min(lower_index + 1, len(ordered) - 1)
     weight = position - lower_index
     return ordered[lower_index] + (ordered[upper_index] - ordered[lower_index]) * weight
+
+
+def _usage_snapshot(generator: CorrectingSQLGenerator) -> GenerationUsage:
+    snapshot = getattr(generator, "usage_snapshot", None)
+    if not callable(snapshot):
+        return GenerationUsage()
+    usage = snapshot()
+    if not isinstance(usage, GenerationUsage):
+        raise TypeError("usage_snapshot must return GenerationUsage")
+    return usage

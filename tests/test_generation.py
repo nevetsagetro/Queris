@@ -11,6 +11,7 @@ from queris.generation import (
     build_sql_prompt,
 )
 from queris.schema import ColumnSchema, DatabaseSchema, TableSchema
+from queris.usage import GenerationUsage
 
 
 @pytest.fixture
@@ -83,21 +84,40 @@ def test_build_sql_prompt_rejects_non_string_question(
 @dataclass
 class FakeResponse:
     text: str | None
+    usage_metadata: "FakeUsageMetadata | None" = None
+
+
+@dataclass
+class FakeUsageMetadata:
+    prompt_token_count: int | None = None
+    candidates_token_count: int | None = None
+    thoughts_token_count: int | None = None
+    tool_use_prompt_token_count: int | None = None
+    total_token_count: int | None = None
 
 
 class FakeModels:
-    def __init__(self, response_text: str | None) -> None:
+    def __init__(
+        self,
+        response_text: str | None,
+        usage_metadata: FakeUsageMetadata | None = None,
+    ) -> None:
         self.response_text = response_text
+        self.usage_metadata = usage_metadata
         self.calls: list[dict[str, Any]] = []
 
     def generate_content(self, *, model: str, contents: str) -> FakeResponse:
         self.calls.append({"model": model, "contents": contents})
-        return FakeResponse(text=self.response_text)
+        return FakeResponse(text=self.response_text, usage_metadata=self.usage_metadata)
 
 
 class FakeClient:
-    def __init__(self, response_text: str | None) -> None:
-        self.models = FakeModels(response_text)
+    def __init__(
+        self,
+        response_text: str | None,
+        usage_metadata: FakeUsageMetadata | None = None,
+    ) -> None:
+        self.models = FakeModels(response_text, usage_metadata)
 
 
 def test_gemini_generator_calls_generate_content(database_schema: DatabaseSchema) -> None:
@@ -124,6 +144,36 @@ def test_gemini_generator_passes_correction_to_prompt(database_schema: DatabaseS
 
     assert "<correction_context>" in client.models.calls[0]["contents"]
     assert "Table missing does not exist" in client.models.calls[0]["contents"]
+
+
+def test_gemini_generator_accumulates_provider_usage(database_schema: DatabaseSchema) -> None:
+    metadata = FakeUsageMetadata(
+        prompt_token_count=10,
+        candidates_token_count=3,
+        thoughts_token_count=2,
+        tool_use_prompt_token_count=1,
+        total_token_count=16,
+    )
+    generator = GeminiSQLGenerator(client=FakeClient("SELECT 1", metadata))
+
+    generator.generate_sql(database_schema, "Question one?")
+    generator.generate_sql(database_schema, "Question two?")
+
+    assert generator.usage_snapshot() == GenerationUsage(
+        input_tokens=22,
+        output_tokens=10,
+        total_tokens=32,
+    )
+
+
+def test_gemini_generator_handles_missing_usage_metadata(
+    database_schema: DatabaseSchema,
+) -> None:
+    generator = GeminiSQLGenerator(client=FakeClient("SELECT 1"))
+
+    generator.generate_sql(database_schema, "Question?")
+
+    assert generator.usage_snapshot() == GenerationUsage()
 
 
 def test_gemini_generator_uses_configured_model(
