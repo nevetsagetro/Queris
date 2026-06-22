@@ -2,9 +2,6 @@
 
 import argparse
 import json
-from collections import Counter
-from datetime import date, datetime
-from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from queris.generation import GeminiSQLGenerator
 from queris.pipeline import FullSchemaSelector, QueryResult, SQLGenerator, run_text_to_sql
+from queris.result_matching import rows_match
 from queris.schema import DatabaseSchema
 
 BASELINE_PASS_COUNT = 7
@@ -153,23 +151,7 @@ def matches_expected_result(case: EvaluationCase, result: QueryResult) -> bool:
     """Return whether a query result matches one expected case without row ordering."""
     if len(result.columns) != case.expected_column_count:
         return False
-    actual_rows = Counter(_normalize_row(row) for row in result.rows)
-    expected_rows = Counter(_normalize_row(row) for row in case.expected_rows)
-    return actual_rows == expected_rows
-
-
-def _normalize_row(row: tuple[Any, ...]) -> tuple[tuple[str, Any], ...]:
-    return tuple(_normalize_value(value) for value in row)
-
-
-def _normalize_value(value: Any) -> tuple[str, Any]:
-    if isinstance(value, bool) or value is None:
-        return ("literal", value)
-    if isinstance(value, (Decimal, int, float)):
-        return ("number", Decimal(str(value)).normalize())
-    if isinstance(value, (date, datetime)):
-        return ("date", value.isoformat())
-    return ("literal", value)
+    return rows_match(result.rows, case.expected_rows)
 
 
 def main() -> None:
