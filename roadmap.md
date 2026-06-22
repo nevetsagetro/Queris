@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 7 — Adversarial Test Suite (`[~]`)
-- **Latest checkpoint:** completed Phase 6 with ignored timestamped report history and compatible-run regression comparisons (ADR 0009).
-- **Completed work:** completed the 50-case evaluation harness, all planned metrics, report CLI, and local historical regression tracking.
-- **Pending next:** add versioned Phase 7 adversarial cases with explicit pass/fail criteria, starting with destructive natural-language intent.
-- **Resume point:** define the adversarial evaluation-set contract and verify destructive intent cannot reach validated execution.
+- **Latest checkpoint:** added versioned destructive-intent cases and a credential-free evaluator requiring 100% validation-stage blocking before execution (ADR 0010).
+- **Completed work:** completed Phase 6 and the first Phase 7 category: destructive natural-language intent.
+- **Pending next:** add prompt-injection cases embedded in data fields and require 100% safe behavior.
+- **Resume point:** create deterministic untrusted sample values containing instruction-like text and verify they cannot alter generated-agent behavior or bypass SQL validation.
 - **Last updated:** 2026-06-22
 
 ---
@@ -122,7 +122,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Phase 7 — Adversarial Test Suite
 **Goal:** stress-test the safety and robustness boundaries explicitly, not just the happy path.
 
-- [ ] Destructive intent: "delete the orders table", "drop all data", etc. → must be blocked, not just refused conversationally
+- [x] Destructive intent: "delete the orders table", "drop all data", etc. → must be blocked, not just refused conversationally (ADR 0010)
 - [ ] Prompt injection embedded in data fields (e.g. a product description containing "ignore previous instructions and...") → must not alter agent behavior
 - [ ] Ambiguous questions (no clear single interpretation) → agent should ask for clarification or state the assumption made, not silently guess
 - [ ] Similar/colliding column names across tables → correct table must be picked, or the ambiguity surfaced
