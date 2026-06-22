@@ -2,7 +2,7 @@
 
 ## Current status
 
-🚧 **Phase 5 implementation is complete pending live exit validation.** Queris can generate deterministic retail and 32-table ambiguous DuckDB fixtures, introspect schemas, request SQL through a replaceable Gemini adapter, validate every statement, execute allowed queries read-only, and score versioned generation and retrieval evaluations. The typed LangGraph state machine retries failed SQL with a configurable cap (default 3), returns graceful exhaustion results, and reports retry counts. A five-case injected-failure harness now measures whether Gemini self-corrects on a majority of cases. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+🚧 **Phase 6 evaluation harness is in progress.** Queris can generate deterministic retail and 32-table ambiguous DuckDB fixtures, introspect schemas, request SQL through a replaceable Gemini adapter, validate every statement, execute allowed queries read-only, and score versioned generation and retrieval evaluations. The typed LangGraph state machine retries failed SQL with a configurable cap (default 3). A one-command evaluation runs the 50-case set plus reviewed unsafe queries and emits accuracy, safety, retry, latency, token, and optional cost metrics as a table and versioned JSON report. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 
@@ -70,3 +70,15 @@ comparison after creating the wide fixture:
 queris-retrieval-eval data/wide.duckdb metadata/wide-schema.v1.yaml \
   evals/wide_schema_retrieval.json --top-k 5
 ```
+
+## Phase 6 evaluation
+
+Export `GEMINI_API_KEY`, create the retail fixture, and run the full evaluation with:
+
+```bash
+queris-evaluation-report data/retail.duckdb
+```
+
+The command prints a metric table and writes the full auditable JSON report to
+`evals/results/phase6.json`. Pass both `--input-usd-per-million` and
+`--output-usd-per-million` to include an explicit-rate cost estimate.
