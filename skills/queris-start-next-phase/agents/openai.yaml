@@ -1,0 +1,6 @@
+interface:
+  display_name: "Start Queris Next Phase"
+  short_description: "Gate and begin the next roadmap phase"
+  default_prompt: "Use $queris-start-next-phase to verify prerequisites and begin coding the next Queris roadmap phase."
+policy:
+  allow_implicit_invocation: false
