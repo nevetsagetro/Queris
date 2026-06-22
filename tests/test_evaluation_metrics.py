@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+import queris.evaluation_metrics as evaluation_metrics
 from queris.evaluation_metrics import (
     EvaluationOutcome,
     matches_evaluation_result,
@@ -80,6 +81,8 @@ def test_reference_queries_produce_perfect_accuracy(sample_database: Path) -> No
     assert metrics.execution_accuracy == 1
     assert metrics.result_accuracy == 1
     assert metrics.average_retry_count == 0
+    assert metrics.p50_latency_ms >= 0
+    assert metrics.p95_latency_ms >= metrics.p50_latency_ms
     assert all(outcome.retry_count == 0 for outcome in outcomes)
 
 
@@ -123,6 +126,27 @@ def test_retry_metrics_include_recovered_execution(sample_database: Path) -> Non
     assert metrics.average_retry_count == 1
 
 
+def test_latency_metrics_use_monotonic_case_timings(
+    sample_database: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    evaluation_set = _subset(load_evaluation_set(EVALUATION_SET_PATH), 3)
+    readings = iter((1.0, 1.01, 2.0, 2.02, 3.0, 3.04))
+    monkeypatch.setattr(evaluation_metrics, "perf_counter", lambda: next(readings))
+
+    outcomes = run_accuracy_evaluation(
+        sample_database,
+        evaluation_set,
+        ReferenceGenerator(evaluation_set),
+        sample_limit=0,
+    )
+    metrics = summarize_accuracy(outcomes)
+
+    assert [outcome.latency_ms for outcome in outcomes] == pytest.approx([10, 20, 40])
+    assert metrics.p50_latency_ms == pytest.approx(20)
+    assert metrics.p95_latency_ms == pytest.approx(38)
+
+
 def test_result_matching_allows_row_and_column_reordering() -> None:
     case = EvaluationSetCase(
         id="reordered-result",
@@ -155,6 +179,8 @@ def test_summary_handles_no_attempted_cases() -> None:
     assert metrics.execution_accuracy == 0
     assert metrics.result_accuracy == 0
     assert metrics.average_retry_count == 0
+    assert metrics.p50_latency_ms == 0
+    assert metrics.p95_latency_ms == 0
 
 
 def test_correct_result_requires_successful_execution() -> None:
@@ -166,4 +192,5 @@ def test_correct_result_requires_successful_execution() -> None:
             execution_succeeded=False,
             result_correct=True,
             retry_count=0,
+            latency_ms=0,
         )
