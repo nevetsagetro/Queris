@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 6 — Evaluation Harness (`[~]`)
-- **Latest checkpoint:** added auditable outcomes and blocked-unsafe-query rate over the shared 24-case SQL safety suite.
-- **Completed work:** completed the 50-case set plus execution, result, and blocked-unsafe-query metrics; safety evaluation remains parser-only and runs before database execution.
-- **Pending next:** implement average retry count from the existing agent-loop retry outcomes.
-- **Resume point:** aggregate retry counts across attempted Phase 6 cases, define zero-case behavior, and expose the metric alongside execution and result accuracy.
+- **Latest checkpoint:** added total and average retry counts to the aggregate Phase 6 accuracy metrics, including recovered executions and zero-case behavior.
+- **Completed work:** completed the 50-case set plus execution, result, unsafe-query, and retry metrics over auditable per-case outcomes.
+- **Pending next:** implement per-case latency measurement and aggregate p50/p95 latency.
+- **Resume point:** record monotonic elapsed time around each agent-loop case, define percentile calculation and units, and test deterministic timing without live provider calls.
 - **Last updated:** 2026-06-22
 
 ---
@@ -109,7 +109,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
   - [x] Execution accuracy (did it run without error?)
   - [x] Result accuracy (does the output match expected, allowing for row/column order differences?)
   - [x] Blocked-unsafe-query rate (from the safety test suite)
-  - [ ] Average number of retries (from Phase 5)
+  - [x] Average number of retries (from Phase 5)
   - [ ] Latency per query (p50/p95)
   - [ ] Token/cost per query
 - [ ] Build a CLI/script to run the full eval set and output a report (table + JSON)
