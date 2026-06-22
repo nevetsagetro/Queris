@@ -1,0 +1,135 @@
+from pathlib import Path
+
+import pytest
+
+from queris.evaluation_metrics import (
+    EvaluationOutcome,
+    matches_evaluation_result,
+    run_accuracy_evaluation,
+    summarize_accuracy,
+)
+from queris.evaluation_set import EvaluationSet, EvaluationSetCase, load_evaluation_set
+from queris.generation import SQLCorrectionContext
+from queris.schema import DatabaseSchema
+
+EVALUATION_SET_PATH = Path("evals/retail_v1.json")
+
+
+class ReferenceGenerator:
+    def __init__(self, evaluation_set: EvaluationSet) -> None:
+        self._case_by_question = {case.question: case for case in evaluation_set.cases}
+
+    def generate_sql(
+        self,
+        schema: DatabaseSchema,
+        question: str,
+        correction: SQLCorrectionContext | None = None,
+    ) -> str:
+        return self._case_by_question[question].expected_sql
+
+
+class MixedGenerator(ReferenceGenerator):
+    def __init__(self, evaluation_set: EvaluationSet) -> None:
+        super().__init__(evaluation_set)
+        self._sql_by_question = {
+            evaluation_set.cases[0].question: evaluation_set.cases[0].expected_sql,
+            evaluation_set.cases[1].question: "SELECT 1",
+            evaluation_set.cases[2].question: "SELECT * FROM missing_table",
+        }
+
+    def generate_sql(
+        self,
+        schema: DatabaseSchema,
+        question: str,
+        correction: SQLCorrectionContext | None = None,
+    ) -> str:
+        return self._sql_by_question[question]
+
+
+def _subset(evaluation_set: EvaluationSet, count: int) -> EvaluationSet:
+    return evaluation_set.model_copy(update={"cases": evaluation_set.cases[:count]})
+
+
+def test_reference_queries_produce_perfect_accuracy(sample_database: Path) -> None:
+    evaluation_set = _subset(load_evaluation_set(EVALUATION_SET_PATH), 3)
+
+    outcomes = run_accuracy_evaluation(
+        sample_database,
+        evaluation_set,
+        ReferenceGenerator(evaluation_set),
+        sample_limit=0,
+    )
+    metrics = summarize_accuracy(outcomes)
+
+    assert metrics.total == 3
+    assert metrics.execution_successes == 3
+    assert metrics.correct_results == 3
+    assert metrics.execution_accuracy == 1
+    assert metrics.result_accuracy == 1
+    assert all(outcome.retry_count == 0 for outcome in outcomes)
+
+
+def test_accuracy_distinguishes_wrong_results_from_failed_execution(
+    sample_database: Path,
+) -> None:
+    evaluation_set = _subset(load_evaluation_set(EVALUATION_SET_PATH), 3)
+
+    outcomes = run_accuracy_evaluation(
+        sample_database,
+        evaluation_set,
+        MixedGenerator(evaluation_set),
+        sample_limit=0,
+        max_retries=0,
+    )
+    metrics = summarize_accuracy(outcomes)
+
+    assert [outcome.execution_succeeded for outcome in outcomes] == [True, True, False]
+    assert [outcome.result_correct for outcome in outcomes] == [True, False, False]
+    assert outcomes[2].failure_stage == "execution"
+    assert outcomes[2].retries_exhausted is True
+    assert metrics.execution_accuracy == pytest.approx(2 / 3)
+    assert metrics.result_accuracy == pytest.approx(1 / 3)
+
+
+def test_result_matching_allows_row_and_column_reordering() -> None:
+    case = EvaluationSetCase(
+        id="reordered-result",
+        category="multi-table-join",
+        question="Return regions and counts",
+        expected_sql="SELECT name, 1 AS count FROM regions",
+        expected_columns=("region_name", "order_count"),
+        expected_rows=(("North", 2), ("South", 1)),
+    )
+
+    assert matches_evaluation_result(
+        case,
+        ("order_count", "region_name"),
+        ((1, "South"), (2, "North")),
+    )
+
+
+def test_result_matching_rejects_wrong_values_and_shapes() -> None:
+    case = load_evaluation_set(EVALUATION_SET_PATH).cases[0]
+
+    assert not matches_evaluation_result(case, ("count",), ((999,),))
+    assert not matches_evaluation_result(case, ("one", "two"), ((4, 4),))
+
+
+def test_summary_handles_no_attempted_cases() -> None:
+    metrics = summarize_accuracy(())
+
+    assert metrics.total == 0
+    assert metrics.execution_accuracy == 0
+    assert metrics.result_accuracy == 0
+
+
+def test_correct_result_requires_successful_execution() -> None:
+    with pytest.raises(ValueError, match="successful execution"):
+        EvaluationOutcome(
+            case_id="invalid-outcome",
+            category="simple-aggregation",
+            question="Question?",
+            execution_succeeded=False,
+            result_correct=True,
+            retry_count=0,
+        )
