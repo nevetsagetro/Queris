@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 6 — Evaluation Harness (`[~]`)
-- **Latest checkpoint:** passed the Phase 5 self-correction exit evaluation with `gemini-3.5-flash`: 5/5 correct recovered results against a 3/5 threshold.
-- **Completed work:** completed all Phase 5 implementation items and live-validated bounded correction; every injected failure recovered on the first retry without exhaustion.
-- **Pending next:** define the Phase 6 evaluation-set storage contract and expand the versioned set toward 50–100 reviewed questions.
-- **Resume point:** document the evaluation-set format decision, then author the first reviewed Phase 6 question tranche with expected SQL and expected results.
+- **Latest checkpoint:** selected versioned JSON for Phase 6 evaluation sets in ADR 0008 and added a 15-question reviewed `retail-v1` tranche covering all required query categories.
+- **Completed work:** completed Phase 5 and added strict Phase 6 set validation for version, IDs, row shape, coverage metadata, and read-only reference SQL.
+- **Pending next:** expand `evals/retail_v1.json` from 15 toward 50–100 reviewed questions while preserving deterministic reference-result validation.
+- **Resume point:** author the next reviewed retail question tranche, prioritizing additional multi-table joins, time filters, HAVING clauses, and nested subqueries before implementing aggregate metrics.
 - **Last updated:** 2026-06-22
 
 ---
@@ -104,7 +104,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 **Goal:** the project's actual differentiator. Without this, it's "just another demo."
 
 - [ ] Author 50–100 questions with expected SQL and expected result, covering: simple aggregation, multi-table joins, time filtering, group-by + having, nested subqueries
-- [ ] Decide and document the storage format (YAML/JSON/CSV) for the eval set
+- [x] Decide and document the storage format: versioned JSON (ADR 0008)
 - [ ] Implement metrics:
   - [ ] Execution accuracy (did it run without error?)
   - [ ] Result accuracy (does the output match expected, allowing for row/column order differences?)
