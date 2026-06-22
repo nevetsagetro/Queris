@@ -1,0 +1,37 @@
+[
+  {
+    "id": "recover-total-orders",
+    "question": "How many orders are there?",
+    "initial_sql": "SELECT COUNT(*) FROM orderz",
+    "expected_column_count": 1,
+    "expected_rows": [[4]]
+  },
+  {
+    "id": "recover-total-revenue",
+    "question": "What is the total revenue across all order items?",
+    "initial_sql": "SELECT SUM(sales_amount) FROM order_items",
+    "expected_column_count": 1,
+    "expected_rows": [[468.0]]
+  },
+  {
+    "id": "recover-orders-by-region",
+    "question": "How many orders are in each region? Return the region name and order count.",
+    "initial_sql": "SELECT regions.name, COUNT(*) FROM orders JOIN regions USING (missing_region_id) GROUP BY regions.name",
+    "expected_column_count": 2,
+    "expected_rows": [["North", 2], ["South", 1], ["West", 1]]
+  },
+  {
+    "id": "recover-revenue-by-category",
+    "question": "What is the total revenue for each product category? Return the category name and revenue.",
+    "initial_sql": "SELECT categories.name, SUM(order_items.revenue) FROM order_items JOIN categories USING (missing_category_id) GROUP BY categories.name",
+    "expected_column_count": 2,
+    "expected_rows": [["Office", 68.0], ["Technology", 200.0], ["Furniture", 200.0]]
+  },
+  {
+    "id": "recover-negative-margin-regions",
+    "question": "Which regions have negative total gross profit? Return the region name and gross profit.",
+    "initial_sql": "SELEC regions.name FROM regions",
+    "expected_column_count": 2,
+    "expected_rows": [["South", -20.0]]
+  }
+]

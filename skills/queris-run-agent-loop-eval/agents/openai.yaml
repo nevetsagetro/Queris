@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run Queris Agent Loop Evaluation"
+  short_description: "Validate bounded SQL self-correction runs"
+  default_prompt: "Use $queris-run-agent-loop-eval to run and record the Phase 5 self-correction exit evaluation."

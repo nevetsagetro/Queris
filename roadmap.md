@@ -6,12 +6,12 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 ## Current focus
 
-- **Active stage:** Phase 5 — Agent Loop (`[~]`)
-- **Latest checkpoint:** added structured retry counts to successful, recovered, and exhausted agent results.
-- **Completed work:** completed all Phase 5 implementation checklist items with bounded correction, graceful exhaustion, and retry metrics.
-- **Pending next:** merge the retry-metrics branch and validate the Phase 5 exit criterion before transitioning to Phase 6.
-- **Resume point:** after `feat/agent-retry-metrics` merges, exercise deliberately malformed-prone questions through the live agent loop and record whether a majority self-correct within the cap.
-- **Last updated:** 2026-06-21
+- **Active stage:** Phase 6 — Evaluation Harness (`[~]`)
+- **Latest checkpoint:** passed the Phase 5 self-correction exit evaluation with `gemini-3.5-flash`: 5/5 correct recovered results against a 3/5 threshold.
+- **Completed work:** completed all Phase 5 implementation items and live-validated bounded correction; every injected failure recovered on the first retry without exhaustion.
+- **Pending next:** define the Phase 6 evaluation-set storage contract and expand the versioned set toward 50–100 reviewed questions.
+- **Resume point:** document the evaluation-set format decision, then author the first reviewed Phase 6 question tranche with expected SQL and expected results.
+- **Last updated:** 2026-06-22
 
 ---
 

@@ -145,11 +145,12 @@ def _record_result(case: EvaluationCase, result: QueryResult) -> EvaluationRecor
         generated_sql=result.sql,
         columns=result.columns,
         rows=result.rows,
-        correct=_matches_expected(case, result),
+        correct=matches_expected_result(case, result),
     )
 
 
-def _matches_expected(case: EvaluationCase, result: QueryResult) -> bool:
+def matches_expected_result(case: EvaluationCase, result: QueryResult) -> bool:
+    """Return whether a query result matches one expected case without row ordering."""
     if len(result.columns) != case.expected_column_count:
         return False
     actual_rows = Counter(_normalize_row(row) for row in result.rows)

@@ -20,6 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
+queris-agent-eval = "queris.agent_evaluation:main"
 queris-eval = "queris.evaluation:main"
 queris-enrichment-draft = "queris.enrichment_draft:main"
 queris-retrieval-eval = "queris.retrieval_evaluation:main"
