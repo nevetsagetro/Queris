@@ -12,8 +12,11 @@ from queris.adversarial_evaluation import (
     run_adversarial_evaluation,
     summarize_adversarial_outcomes,
 )
+from queris.wide_schema import create_wide_schema_database
 
 ADVERSARIAL_SET_PATH = Path("evals/adversarial_v1.json")
+WIDE_ADVERSARIAL_SET_PATH = Path("evals/adversarial_wide_v1.json")
+WIDE_ENRICHMENT_PATH = Path("metadata/wide-schema.v1.yaml")
 
 
 def test_versioned_destructive_cases_are_unique() -> None:
@@ -28,6 +31,15 @@ def test_versioned_destructive_cases_are_unique() -> None:
         "prompt-injection-data",
         "ambiguous-question",
     }
+
+
+def test_versioned_collision_cases_are_unique() -> None:
+    evaluation_set = load_adversarial_evaluation_set(WIDE_ADVERSARIAL_SET_PATH)
+
+    assert evaluation_set.dataset_id == "wide-v1"
+    assert len(evaluation_set.cases) == 6
+    assert len({case.id for case in evaluation_set.cases}) == 6
+    assert all(case.category == "schema-collision" for case in evaluation_set.cases)
 
 
 def test_destructive_intent_is_blocked_before_execution(
@@ -124,6 +136,31 @@ def test_ambiguous_cases_clarify_or_record_assumption(sample_database: Path) -> 
     assert all(outcome.passed for outcome in outcomes)
 
 
+def test_collision_cases_select_exact_enriched_column(tmp_path: Path) -> None:
+    database = create_wide_schema_database(tmp_path / "wide.duckdb")
+    evaluation_set = load_adversarial_evaluation_set(WIDE_ADVERSARIAL_SET_PATH)
+
+    outcomes = run_adversarial_evaluation(
+        database,
+        evaluation_set,
+        enrichment_path=WIDE_ENRICHMENT_PATH,
+    )
+
+    assert len(outcomes) == 6
+    assert all(outcome.selected_kind == "column" for outcome in outcomes)
+    assert all(outcome.selected_table == outcome.expected_table for outcome in outcomes)
+    assert all(outcome.selected_column == outcome.expected_column for outcome in outcomes)
+    assert all(outcome.passed for outcome in outcomes)
+
+
+def test_collision_cases_require_reviewed_enrichment(tmp_path: Path) -> None:
+    database = create_wide_schema_database(tmp_path / "wide.duckdb")
+    evaluation_set = load_adversarial_evaluation_set(WIDE_ADVERSARIAL_SET_PATH)
+
+    with pytest.raises(ValueError, match="enrichment"):
+        run_adversarial_evaluation(database, evaluation_set)
+
+
 def test_adversarial_set_rejects_duplicate_ids(tmp_path: Path) -> None:
     payload = json.loads(ADVERSARIAL_SET_PATH.read_text(encoding="utf-8"))
     payload["cases"] = [payload["cases"][0], payload["cases"][0]]
@@ -161,3 +198,34 @@ def test_cli_writes_passing_audit_report(
     assert payload["summary"]["pass_rate"] == 1
     assert len(payload["outcomes"]) == 15
     assert f"{output_path}\n" in stdout
+
+
+def test_cli_writes_passing_collision_report(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    database = create_wide_schema_database(tmp_path / "wide.duckdb")
+    output_path = tmp_path / "wide-adversarial.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "queris-adversarial-eval",
+            str(database),
+            "--cases",
+            str(WIDE_ADVERSARIAL_SET_PATH),
+            "--enrichment",
+            str(WIDE_ENRICHMENT_PATH),
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    adversarial_evaluation.main()
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["dataset_id"] == "wide-v1"
+    assert payload["summary"]["passed_cases"] == 6
+    assert payload["summary"]["passed"] is True
+    assert f"{output_path}\n" in capsys.readouterr().out

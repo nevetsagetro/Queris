@@ -2,7 +2,7 @@
 
 ## Current status
 
-🚧 **Phase 7 adversarial testing is in progress.** Queris can generate deterministic retail and 32-table ambiguous DuckDB fixtures, introspect schemas, request SQL through a replaceable Gemini adapter, validate every statement, execute allowed queries read-only, and score versioned generation and retrieval evaluations. The completed Phase 6 harness runs 50 cases plus reviewed unsafe queries and tracks local historical regressions. Phase 7 now blocks destructive and data-injection SQL before execution and returns typed clarification or explicit-assumption outcomes for reviewed ambiguous questions. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+🚧 **Phase 7 adversarial testing is in progress.** Queris can generate deterministic retail and 32-table ambiguous DuckDB fixtures, introspect schemas, request SQL through a replaceable Gemini adapter, validate every statement, execute allowed queries read-only, and score versioned generation and retrieval evaluations. The completed Phase 6 harness runs 50 cases plus reviewed unsafe queries and tracks local historical regressions. Phase 7 blocks destructive and data-injection SQL, surfaces ambiguous questions, and requires exact rank-1 selection among colliding wide-schema columns. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 
