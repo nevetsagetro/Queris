@@ -24,12 +24,13 @@ def test_versioned_destructive_cases_are_unique() -> None:
 
     assert evaluation_set.format_version == 1
     assert evaluation_set.dataset_id == "retail-v1"
-    assert len(evaluation_set.cases) == 15
-    assert len({case.id for case in evaluation_set.cases}) == 15
+    assert len(evaluation_set.cases) == 18
+    assert len({case.id for case in evaluation_set.cases}) == 18
     assert {case.category for case in evaluation_set.cases} == {
         "destructive-intent",
         "prompt-injection-data",
         "ambiguous-question",
+        "unanswerable-question",
     }
 
 
@@ -54,7 +55,9 @@ def test_destructive_intent_is_blocked_before_execution(
     safety_set = evaluation_set.model_copy(
         update={
             "cases": tuple(
-                case for case in evaluation_set.cases if case.category != "ambiguous-question"
+                case
+                for case in evaluation_set.cases
+                if case.category in {"destructive-intent", "prompt-injection-data"}
             )
         }
     )
@@ -62,7 +65,11 @@ def test_destructive_intent_is_blocked_before_execution(
     outcomes = run_adversarial_evaluation(sample_database, safety_set)
     summary = summarize_adversarial_outcomes(outcomes)
 
-    safety_outcomes = [outcome for outcome in outcomes if outcome.category != "ambiguous-question"]
+    safety_outcomes = [
+        outcome
+        for outcome in outcomes
+        if outcome.category in {"destructive-intent", "prompt-injection-data"}
+    ]
     assert all(outcome.blocked_before_execution for outcome in safety_outcomes)
     assert all(outcome.failure_stage == "validation" for outcome in safety_outcomes)
     assert all(outcome.source_value_observed for outcome in safety_outcomes)
@@ -136,6 +143,26 @@ def test_ambiguous_cases_clarify_or_record_assumption(sample_database: Path) -> 
     assert all(outcome.passed for outcome in outcomes)
 
 
+def test_unanswerable_cases_return_no_answer_before_generation(sample_database: Path) -> None:
+    evaluation_set = load_adversarial_evaluation_set(ADVERSARIAL_SET_PATH)
+    unanswerable_set = evaluation_set.model_copy(
+        update={
+            "cases": tuple(
+                case for case in evaluation_set.cases if case.category == "unanswerable-question"
+            )
+        }
+    )
+
+    outcomes = run_adversarial_evaluation(sample_database, unanswerable_set)
+    summary = summarize_adversarial_outcomes(outcomes)
+
+    assert len(outcomes) == 3
+    assert all(outcome.status == "no_answer" for outcome in outcomes)
+    assert all(outcome.final_sql is None for outcome in outcomes)
+    assert all(outcome.passed for outcome in outcomes)
+    assert summary.passed is True
+
+
 def test_collision_cases_select_exact_enriched_column(tmp_path: Path) -> None:
     database = create_wide_schema_database(tmp_path / "wide.duckdb")
     evaluation_set = load_adversarial_evaluation_set(WIDE_ADVERSARIAL_SET_PATH)
@@ -196,7 +223,7 @@ def test_cli_writes_passing_audit_report(
     assert payload["format_version"] == 1
     assert payload["summary"]["passed"] is True
     assert payload["summary"]["pass_rate"] == 1
-    assert len(payload["outcomes"]) == 15
+    assert len(payload["outcomes"]) == 18
     assert f"{output_path}\n" in stdout
 
 

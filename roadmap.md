@@ -7,11 +7,11 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 7 — Adversarial Test Suite (`[~]`)
-- **Latest checkpoint:** added wide-schema collision cases requiring exact rank-1 enriched column selection across repeated `amt`, `qty`, and `flg_x` identifiers (ADR 0010).
-- **Completed work:** completed Phase 6 plus Phase 7 destructive-intent, prompt-injection-in-data, ambiguous-question, and schema-collision categories.
-- **Pending next:** define explicit behavior for questions that cannot be answered from the live schema.
-- **Resume point:** add versioned unanswerable questions and require a structured no-answer outcome before SQL generation instead of hallucinating a query.
-- **Last updated:** 2026-06-22
+- **Latest checkpoint:** added versioned unanswerable-question cases requiring a typed `no_answer` outcome before SQL generation (ADR 0010).
+- **Completed work:** completed Phase 6 plus Phase 7 destructive-intent, prompt-injection-in-data, ambiguous-question, schema-collision, and unanswerable-question categories.
+- **Pending next:** reject incorrect or stale enrichment metadata before indexing.
+- **Resume point:** add stale enrichment metadata cases and require validation to fail before vector indexing or retrieval uses the metadata.
+- **Last updated:** 2026-06-23
 
 ---
 
@@ -126,7 +126,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 - [x] Prompt injection embedded in data fields (e.g. a product description containing "ignore previous instructions and...") → must not alter agent behavior (ADR 0010)
 - [x] Ambiguous questions (no clear single interpretation) → agent should ask for clarification or state the assumption made, not silently guess (ADR 0010)
 - [x] Similar/colliding column names across tables → correct table must be picked, or the ambiguity surfaced (ADR 0010)
-- [ ] Unanswerable questions (data doesn't exist in the schema) → agent must say so, not hallucinate a query
+- [x] Unanswerable questions (data doesn't exist in the schema) → agent must say so, not hallucinate a query (ADR 0010)
 - [ ] Incorrect or stale enrichment metadata → validation must fail before indexing
 - [ ] Add all of the above as a permanent subset of the Phase 6 eval harness, with their own pass/fail criteria
 

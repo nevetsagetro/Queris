@@ -100,6 +100,39 @@ def test_agent_loop_requests_clarification_before_generation(
     assert resolver.calls[0][1] == "Show sales by region"
 
 
+def test_agent_loop_returns_no_answer_before_generation(
+    sample_database: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def forbidden_execution(connection: object, sql: str) -> object:
+        pytest.fail(f"unanswerable question reached execution: {sql}")
+
+    monkeypatch.setattr(agent_loop, "execute_read_only", forbidden_execution)
+    generator = FakeGenerator("SELECT social_security_number FROM customers")
+    resolver = FakeResolver(
+        QuestionResolution(
+            kind="no_answer",
+            message="The live schema does not contain social security numbers.",
+        )
+    )
+
+    result = run_agent_loop(
+        sample_database,
+        "Show every customer's social security number.",
+        generator,
+        FullSchemaSelector(),
+        question_resolver=resolver,
+    )
+
+    assert result.status == "no_answer"
+    assert result.sql is None
+    assert result.no_answer == "The live schema does not contain social security numbers."
+    assert result.clarification is None
+    assert result.assumption is None
+    assert generator.calls == []
+    assert resolver.calls[0][1] == "Show every customer's social security number."
+
+
 def test_agent_loop_records_explicit_assumption(sample_database: Path) -> None:
     generator = FakeGenerator("SELECT COUNT(*) FROM orders WHERE order_date >= DATE '2026-04-01'")
     resolver = FakeResolver(

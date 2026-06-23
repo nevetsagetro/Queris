@@ -15,8 +15,8 @@ Invoke `$queris-run-baseline-eval` when rerunning or recording the versioned tex
 Invoke `$queris-run-agent-loop-eval` when running or recording the Phase 5 self-correction exit evaluation, checking its 3/5 threshold, or investigating a correction failure.
 
 Invoke `$queris-run-adversarial-eval` when running or recording Phase 7 destructive-intent,
-prompt-injection-in-data, ambiguous-question, or wide-schema collision cases; checking safety and
-documented-behavior thresholds; or investigating an adversarial failure.
+prompt-injection-in-data, ambiguous-question, unanswerable-question, or wide-schema collision
+cases; checking safety and documented-behavior thresholds; or investigating an adversarial failure.
 
 When introducing or materially changing a repeatable multi-step repository process, create or update a focused skill under `skills/` and reference it from this file when contributors should invoke it. Keep one-off implementation details in the task or code instead of turning them into skills.
 

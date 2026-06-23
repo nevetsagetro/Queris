@@ -19,6 +19,8 @@ column, and exact untrusted sample value. Validate the document with immutable d
 Pydantic models that reject unknown fields, unsupported versions, empty values, and duplicate IDs.
 Ambiguous-question cases declare either a clarification response with no SQL or an explicit
 assumption paired with read-only SQL.
+Unanswerable-question cases declare the reviewed no-answer response required when the requested data
+is absent from the live schema.
 Schema-collision cases live in a separate wide-dataset document and declare the exact enriched
 schema, table, and column that must rank first among repeated identifiers.
 
@@ -32,6 +34,8 @@ Resolve ambiguity before generation. A clarification terminates with a typed res
 execution. An assumption remains attached to the terminal query result so callers cannot present the
 answer as an unexplained guess. The adversarial evaluator requires each reviewed response and status
 to match its case contract.
+Unanswerable cases use the same pre-generation resolver boundary and require a typed `no_answer`
+terminal state with no SQL generated.
 
 Evaluate schema collisions against the deterministic 32-table fixture and reviewed enrichment using
 the same embedding and cosine tie-break logic as offline retrieval metrics. Require an exact rank-1
@@ -43,4 +47,5 @@ column match; a merely present top-k result does not pass.
 - Natural-language attacks and their worst-case SQL translations remain reviewable together.
 - Additional Phase 7 categories can extend the versioned contract with category-specific outcomes.
 - Live-model robustness remains a separate measurement from the mandatory SQL enforcement layer.
+- Missing-schema requests fail as explicit no-answer outcomes instead of execution-stage hallucinations.
 - Wide collision evaluation fails closed when reviewed enrichment metadata is absent or stale.
