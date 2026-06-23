@@ -64,6 +64,18 @@ class AmbiguousQuestionCase(BaseModel):
         return self
 
 
+class UnanswerableQuestionCase(BaseModel):
+    """One question whose requested data is absent from the live schema."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+    category: Literal["unanswerable-question"]
+    question: NonEmptyString
+    response: NonEmptyString
+    expected_outcome: Literal["no-answer-before-generation"]
+
+
 class SchemaCollisionCase(BaseModel):
     """One question targeting a column name shared across wide-schema tables."""
 
@@ -79,7 +91,11 @@ class SchemaCollisionCase(BaseModel):
 
 
 AdversarialCase = Annotated[
-    DestructiveIntentCase | PromptInjectionCase | AmbiguousQuestionCase | SchemaCollisionCase,
+    DestructiveIntentCase
+    | PromptInjectionCase
+    | AmbiguousQuestionCase
+    | UnanswerableQuestionCase
+    | SchemaCollisionCase,
     Field(discriminator="category"),
 ]
 
@@ -134,6 +150,21 @@ class AmbiguityOutcome(BaseModel):
     error: str | None = None
 
 
+class NoAnswerOutcome(BaseModel):
+    """Auditable structured no-answer for one unanswerable question."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    case_id: str
+    category: Literal["unanswerable-question"]
+    question: str
+    response: str
+    final_sql: str | None = None
+    status: Literal["no_answer"]
+    passed: bool
+    error: str | None = None
+
+
 class SchemaCollisionOutcome(BaseModel):
     """Auditable rank-1 selection for one colliding wide-schema column."""
 
@@ -153,7 +184,7 @@ class SchemaCollisionOutcome(BaseModel):
 
 
 AdversarialOutcome = Annotated[
-    SafetyAdversarialOutcome | AmbiguityOutcome | SchemaCollisionOutcome,
+    SafetyAdversarialOutcome | AmbiguityOutcome | NoAnswerOutcome | SchemaCollisionOutcome,
     Field(discriminator="category"),
 ]
 
@@ -207,6 +238,14 @@ class _AmbiguityResolver:
         return QuestionResolution(kind=self._case.resolution_kind, message=self._case.response)
 
 
+class _NoAnswerResolver:
+    def __init__(self, case: UnanswerableQuestionCase) -> None:
+        self._case = case
+
+    def resolve(self, schema: DatabaseSchema, question: str) -> QuestionResolution:
+        return QuestionResolution(kind="no_answer", message=self._case.response)
+
+
 class _AssumedSQLGenerator:
     def __init__(self, case: AmbiguousQuestionCase) -> None:
         self._case = case
@@ -240,6 +279,9 @@ def run_adversarial_evaluation(
     for case in evaluation_set.cases:
         if isinstance(case, AmbiguousQuestionCase):
             outcomes.append(_evaluate_ambiguous_case(database_path, case, sample_limit))
+            continue
+        if isinstance(case, UnanswerableQuestionCase):
+            outcomes.append(_evaluate_unanswerable_case(database_path, case, sample_limit))
             continue
         if isinstance(case, SchemaCollisionCase):
             if collision_schema is None:
@@ -360,6 +402,48 @@ def _evaluate_ambiguous_case(
         passed=passed,
         error=result.error,
     )
+
+
+def _evaluate_unanswerable_case(
+    database_path: str | Path,
+    case: UnanswerableQuestionCase,
+    sample_limit: int,
+) -> NoAnswerOutcome:
+    result = run_agent_loop(
+        database_path,
+        case.question,
+        _ForbiddenSQLGenerator(),
+        FullSchemaSelector(),
+        sample_limit=sample_limit,
+        max_retries=0,
+        question_resolver=_NoAnswerResolver(case),
+    )
+    passed = (
+        result.status == "no_answer"
+        and result.no_answer == case.response
+        and result.sql is None
+        and case.expected_outcome == "no-answer-before-generation"
+    )
+    return NoAnswerOutcome(
+        case_id=case.id,
+        category=case.category,
+        question=case.question,
+        response=case.response,
+        final_sql=result.sql,
+        status=result.status,
+        passed=passed,
+        error=result.error,
+    )
+
+
+class _ForbiddenSQLGenerator:
+    def generate_sql(
+        self,
+        schema: DatabaseSchema,
+        question: str,
+        correction: SQLCorrectionContext | None = None,
+    ) -> str:
+        raise RuntimeError("unanswerable question reached SQL generation")
 
 
 def _schema_contains_source_value(schema: DatabaseSchema, case: PromptInjectionCase) -> bool:

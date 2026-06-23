@@ -32,26 +32,26 @@ class CorrectingSQLGenerator(Protocol):
 
 
 class QuestionResolution(BaseModel):
-    """Structured pre-generation decision for an ambiguous question."""
+    """Structured pre-generation decision for a question that should not go to SQL."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    kind: Literal["clarification", "assumption"]
+    kind: Literal["clarification", "assumption", "no_answer"]
     message: str = Field(min_length=1)
 
 
 class QuestionResolver(Protocol):
-    """Resolve ambiguity before SQL generation or return no intervention."""
+    """Resolve pre-generation question handling or return no intervention."""
 
     def resolve(self, schema: DatabaseSchema, question: str) -> QuestionResolution | None: ...
 
 
 class AgentQueryResult(BaseModel):
-    """Terminal query, failure, or clarification from agent orchestration."""
+    """Terminal query, failure, clarification, or no-answer from orchestration."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    status: Literal["success", "failure", "clarification"]
+    status: Literal["success", "failure", "clarification", "no_answer"]
     question: str
     sql: str | None
     columns: tuple[str, ...] = ()
@@ -63,6 +63,7 @@ class AgentQueryResult(BaseModel):
     explanation: str | None = None
     clarification: str | None = None
     assumption: str | None = None
+    no_answer: str | None = None
 
     @model_validator(mode="after")
     def require_consistent_terminal_state(self) -> Self:
@@ -74,6 +75,7 @@ class AgentQueryResult(BaseModel):
                     self.retries_exhausted,
                     self.explanation is not None,
                     self.clarification is not None,
+                    self.no_answer is not None,
                 )
             ):
                 raise ValueError("successful result must contain SQL without failure details")
@@ -85,9 +87,10 @@ class AgentQueryResult(BaseModel):
                 or not self.retries_exhausted
                 or not self.explanation
                 or self.clarification is not None
+                or self.no_answer is not None
             ):
                 raise ValueError("failed result must contain SQL and failure details")
-        elif (
+        elif self.status == "clarification" and (
             self.sql is not None
             or self.failure_stage is not None
             or self.error is not None
@@ -95,11 +98,26 @@ class AgentQueryResult(BaseModel):
             or self.explanation is not None
             or not self.clarification
             or self.assumption is not None
+            or self.no_answer is not None
             or self.retry_count != 0
             or self.columns
             or self.rows
         ):
             raise ValueError("clarification result must terminate before SQL generation")
+        elif self.status == "no_answer" and (
+            self.sql is not None
+            or self.failure_stage is not None
+            or self.error is not None
+            or self.retries_exhausted
+            or self.explanation is not None
+            or self.clarification is not None
+            or self.assumption is not None
+            or not self.no_answer
+            or self.retry_count != 0
+            or self.columns
+            or self.rows
+        ):
+            raise ValueError("no-answer result must terminate before SQL generation")
         return self
 
 
@@ -143,6 +161,14 @@ def run_agent_loop(
                 sql=None,
                 retry_count=0,
                 clarification=resolution.message,
+            )
+        if resolution is not None and resolution.kind == "no_answer":
+            return AgentQueryResult(
+                status="no_answer",
+                question=normalized_question,
+                sql=None,
+                retry_count=0,
+                no_answer=resolution.message,
             )
         assumption = resolution.message if resolution is not None else None
         graph = _build_graph(connection, generator, schema_selector)

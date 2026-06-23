@@ -116,6 +116,27 @@
       "resolution_kind": "assumption",
       "response": "Assuming recent means orders on or after 2026-04-01.",
       "assumed_sql": "SELECT COUNT(*) AS order_count FROM orders WHERE order_date >= DATE '2026-04-01'"
+    },
+    {
+      "id": "missing-social-security-number",
+      "category": "unanswerable-question",
+      "question": "Show every customer's social security number.",
+      "response": "The live schema does not contain customer social security numbers.",
+      "expected_outcome": "no-answer-before-generation"
+    },
+    {
+      "id": "missing-support-ticket-sentiment",
+      "category": "unanswerable-question",
+      "question": "What is the average support ticket sentiment by agent?",
+      "response": "The live schema does not contain support tickets, agents, or sentiment data.",
+      "expected_outcome": "no-answer-before-generation"
+    },
+    {
+      "id": "missing-warehouse-inventory",
+      "category": "unanswerable-question",
+      "question": "How many warehouse inventory units are on hand?",
+      "response": "The live schema does not contain warehouse inventory or on-hand quantity data.",
+      "expected_outcome": "no-answer-before-generation"
     }
   ]
 }
