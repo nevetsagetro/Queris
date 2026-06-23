@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "dataset_id": "wide-v1",
+  "cases": [
+    {
+      "id": "colliding-invoice-amount",
+      "category": "schema-collision",
+      "question": "What is the outstanding invoice balance?",
+      "expected_schema": "main",
+      "expected_table": "invoice_snapshots",
+      "expected_column": "amt",
+      "expected_outcome": "correct-selection"
+    },
+    {
+      "id": "colliding-expense-amount",
+      "category": "schema-collision",
+      "question": "What amount is reimbursable on expense claims?",
+      "expected_schema": "main",
+      "expected_table": "expense_claims",
+      "expected_column": "amt",
+      "expected_outcome": "correct-selection"
+    },
+    {
+      "id": "colliding-inventory-quantity",
+      "category": "schema-collision",
+      "question": "How many inventory units are currently on hand?",
+      "expected_schema": "main",
+      "expected_table": "inventory_balances",
+      "expected_column": "qty",
+      "expected_outcome": "correct-selection"
+    },
+    {
+      "id": "colliding-shipment-quantity",
+      "category": "schema-collision",
+      "question": "How many packages were shipped?",
+      "expected_schema": "main",
+      "expected_table": "shipment_events",
+      "expected_column": "qty",
+      "expected_outcome": "correct-selection"
+    },
+    {
+      "id": "colliding-quality-flag",
+      "category": "schema-collision",
+      "question": "Which quality inspections failed?",
+      "expected_schema": "main",
+      "expected_table": "quality_inspections",
+      "expected_column": "flg_x",
+      "expected_outcome": "correct-selection"
+    },
+    {
+      "id": "colliding-ticket-flag",
+      "category": "schema-collision",
+      "question": "Which service tickets were escalated?",
+      "expected_schema": "main",
+      "expected_table": "service_tickets",
+      "expected_column": "flg_x",
+      "expected_outcome": "correct-selection"
+    }
+  ]
+}

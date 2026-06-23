@@ -9,7 +9,12 @@ from pydantic import BaseModel, ConfigDict
 
 from queris.database import read_only_connection
 from queris.schema import DatabaseSchema, introspect_schema
-from queris.schema_embeddings import DeterministicEmbeddingProvider, embed_schema
+from queris.schema_embeddings import (
+    DeterministicEmbeddingProvider,
+    SchemaDocument,
+    SchemaEmbedding,
+    embed_schema,
+)
 from queris.schema_enrichment import load_schema_enrichment, merge_schema_enrichment
 from queris.wide_schema import ColumnReference, RetrievalLabelSet, load_retrieval_labels
 
@@ -63,6 +68,32 @@ class RetrievalComparison(BaseModel):
         return self.enriched.recall - self.raw.recall
 
 
+def rank_schema_documents(
+    schema: DatabaseSchema,
+    question: str,
+    provider: EvaluationEmbeddingProvider,
+    *,
+    top_k: int = 5,
+) -> tuple[SchemaDocument, ...]:
+    """Return deterministic top-k schema documents for one question."""
+    if not isinstance(question, str):
+        raise TypeError("question must be a string")
+    normalized_question = question.strip()
+    if not normalized_question:
+        raise ValueError("question must be a non-empty string")
+    if type(top_k) is not int or top_k < 1:
+        raise ValueError("top_k must be a positive integer")
+    embeddings = embed_schema(schema, provider)
+    if not embeddings:
+        raise ValueError("schema must contain at least one document")
+    ranked = _rank_schema_embeddings(
+        embeddings,
+        provider.embed_query(normalized_question),
+        top_k=top_k,
+    )
+    return tuple(embedding.document for embedding in ranked)
+
+
 def evaluate_schema_retrieval(
     schema: DatabaseSchema,
     labels: RetrievalLabelSet,
@@ -79,19 +110,11 @@ def evaluate_schema_retrieval(
 
     cases: list[RetrievalCaseMetrics] = []
     for label in labels.cases:
-        query_vector = provider.embed_query(label.question)
-        if len(query_vector) != len(embeddings[0].vector):
-            raise ValueError("query and document embedding dimensions must match")
-        ranked = sorted(
+        ranked = _rank_schema_embeddings(
             embeddings,
-            key=lambda embedding: (
-                -_cosine_similarity(query_vector, embedding.vector),
-                embedding.document.kind,
-                embedding.document.schema_name,
-                embedding.document.table_name,
-                embedding.document.column_name or "",
-            ),
-        )[:top_k]
+            provider.embed_query(label.question),
+            top_k=top_k,
+        )
         retrieved = {
             ColumnReference(
                 schema_name=embedding.document.schema_name,
@@ -132,6 +155,28 @@ def compare_schema_retrieval(
     return RetrievalComparison(
         raw=evaluate_schema_retrieval(raw_schema, labels, provider, top_k=top_k),
         enriched=evaluate_schema_retrieval(enriched_schema, labels, provider, top_k=top_k),
+    )
+
+
+def _rank_schema_embeddings(
+    embeddings: tuple[SchemaEmbedding, ...],
+    query_vector: tuple[float, ...],
+    *,
+    top_k: int,
+) -> tuple[SchemaEmbedding, ...]:
+    if len(query_vector) != len(embeddings[0].vector):
+        raise ValueError("query and document embedding dimensions must match")
+    return tuple(
+        sorted(
+            embeddings,
+            key=lambda embedding: (
+                -_cosine_similarity(query_vector, embedding.vector),
+                embedding.document.kind,
+                embedding.document.schema_name,
+                embedding.document.table_name,
+                embedding.document.column_name or "",
+            ),
+        )[:top_k]
     )
 
 

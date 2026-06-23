@@ -7,9 +7,13 @@ from typing import Annotated, Literal, Self
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from queris.agent_loop import FailureStage, QuestionResolution, run_agent_loop
+from queris.database import read_only_connection
 from queris.generation import SQLCorrectionContext
 from queris.pipeline import FullSchemaSelector
-from queris.schema import DatabaseSchema
+from queris.retrieval_evaluation import rank_schema_documents
+from queris.schema import DatabaseSchema, introspect_schema
+from queris.schema_embeddings import DeterministicEmbeddingProvider
+from queris.schema_enrichment import load_schema_enrichment, merge_schema_enrichment
 
 NonEmptyString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
@@ -60,8 +64,22 @@ class AmbiguousQuestionCase(BaseModel):
         return self
 
 
+class SchemaCollisionCase(BaseModel):
+    """One question targeting a column name shared across wide-schema tables."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+    category: Literal["schema-collision"]
+    question: NonEmptyString
+    expected_schema: NonEmptyString
+    expected_table: NonEmptyString
+    expected_column: NonEmptyString
+    expected_outcome: Literal["correct-selection"]
+
+
 AdversarialCase = Annotated[
-    DestructiveIntentCase | PromptInjectionCase | AmbiguousQuestionCase,
+    DestructiveIntentCase | PromptInjectionCase | AmbiguousQuestionCase | SchemaCollisionCase,
     Field(discriminator="category"),
 ]
 
@@ -116,8 +134,26 @@ class AmbiguityOutcome(BaseModel):
     error: str | None = None
 
 
+class SchemaCollisionOutcome(BaseModel):
+    """Auditable rank-1 selection for one colliding wide-schema column."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    case_id: str
+    category: Literal["schema-collision"]
+    question: str
+    expected_schema: str
+    expected_table: str
+    expected_column: str
+    selected_kind: Literal["table", "column"]
+    selected_schema: str
+    selected_table: str
+    selected_column: str | None = None
+    passed: bool
+
+
 AdversarialOutcome = Annotated[
-    SafetyAdversarialOutcome | AmbiguityOutcome,
+    SafetyAdversarialOutcome | AmbiguityOutcome | SchemaCollisionOutcome,
     Field(discriminator="category"),
 ]
 
@@ -196,12 +232,19 @@ def run_adversarial_evaluation(
     evaluation_set: AdversarialEvaluationSet,
     *,
     sample_limit: int = 3,
+    enrichment_path: str | Path | None = None,
 ) -> tuple[AdversarialOutcome, ...]:
     """Inject every attempted SQL string through the real validation graph."""
+    collision_schema = _load_collision_schema(database_path, enrichment_path, evaluation_set)
     outcomes = []
     for case in evaluation_set.cases:
         if isinstance(case, AmbiguousQuestionCase):
             outcomes.append(_evaluate_ambiguous_case(database_path, case, sample_limit))
+            continue
+        if isinstance(case, SchemaCollisionCase):
+            if collision_schema is None:
+                raise RuntimeError("collision schema was not initialized")
+            outcomes.append(_evaluate_collision_case(collision_schema, case))
             continue
         generator = _AttemptedSQLGenerator(case)
         result = run_agent_loop(
@@ -232,6 +275,52 @@ def run_adversarial_evaluation(
             )
         )
     return tuple(outcomes)
+
+
+def _load_collision_schema(
+    database_path: str | Path,
+    enrichment_path: str | Path | None,
+    evaluation_set: AdversarialEvaluationSet,
+) -> DatabaseSchema | None:
+    if not any(isinstance(case, SchemaCollisionCase) for case in evaluation_set.cases):
+        return None
+    if enrichment_path is None:
+        raise ValueError("schema-collision cases require reviewed enrichment metadata")
+    with read_only_connection(database_path) as connection:
+        raw_schema = introspect_schema(connection, sample_limit=0)
+    return merge_schema_enrichment(raw_schema, load_schema_enrichment(enrichment_path))
+
+
+def _evaluate_collision_case(
+    schema: DatabaseSchema,
+    case: SchemaCollisionCase,
+) -> SchemaCollisionOutcome:
+    [selected] = rank_schema_documents(
+        schema,
+        case.question,
+        DeterministicEmbeddingProvider(),
+        top_k=1,
+    )
+    passed = (
+        selected.kind == "column"
+        and selected.schema_name == case.expected_schema
+        and selected.table_name == case.expected_table
+        and selected.column_name == case.expected_column
+        and case.expected_outcome == "correct-selection"
+    )
+    return SchemaCollisionOutcome(
+        case_id=case.id,
+        category=case.category,
+        question=case.question,
+        expected_schema=case.expected_schema,
+        expected_table=case.expected_table,
+        expected_column=case.expected_column,
+        selected_kind=selected.kind,
+        selected_schema=selected.schema_name,
+        selected_table=selected.table_name,
+        selected_column=selected.column_name,
+        passed=passed,
+    )
 
 
 def _evaluate_ambiguous_case(
@@ -336,10 +425,19 @@ def main() -> None:
         default=Path("evals/results/adversarial.json"),
         help="Ignored local structured JSON report",
     )
+    parser.add_argument(
+        "--enrichment",
+        type=Path,
+        help="Reviewed schema enrichment required by collision cases",
+    )
     args = parser.parse_args()
 
     evaluation_set = load_adversarial_evaluation_set(args.cases)
-    outcomes = run_adversarial_evaluation(args.database, evaluation_set)
+    outcomes = run_adversarial_evaluation(
+        args.database,
+        evaluation_set,
+        enrichment_path=args.enrichment,
+    )
     summary = summarize_adversarial_outcomes(outcomes)
     output_path = write_adversarial_report(args.output, evaluation_set, outcomes)
     print(summary.model_dump_json())

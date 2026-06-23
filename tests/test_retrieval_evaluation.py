@@ -3,7 +3,11 @@ from pathlib import Path
 import pytest
 
 from queris.database import read_only_connection
-from queris.retrieval_evaluation import compare_schema_retrieval, evaluate_schema_retrieval
+from queris.retrieval_evaluation import (
+    compare_schema_retrieval,
+    evaluate_schema_retrieval,
+    rank_schema_documents,
+)
 from queris.schema import introspect_schema
 from queris.schema_embeddings import DeterministicEmbeddingProvider, SchemaEmbeddingError
 from queris.schema_enrichment import load_schema_enrichment, merge_schema_enrichment
@@ -58,6 +62,31 @@ def test_enrichment_improves_wide_schema_retrieval_at_five(tmp_path: Path) -> No
     assert comparison.enriched.recall == pytest.approx(1.0)
     assert comparison.precision_improvement == pytest.approx(0.06)
     assert comparison.recall_improvement == pytest.approx(0.30)
+
+
+def test_enriched_wide_schema_ranks_correct_colliding_column_first(tmp_path: Path) -> None:
+    database = create_wide_schema_database(tmp_path / "wide.duckdb")
+    with read_only_connection(database) as connection:
+        raw_schema = introspect_schema(connection, sample_limit=0)
+    enriched_schema = merge_schema_enrichment(
+        raw_schema,
+        load_schema_enrichment(ENRICHMENT_PATH),
+    )
+    provider = DeterministicEmbeddingProvider()
+
+    for case in load_retrieval_labels(LABELS_PATH).cases:
+        [document] = rank_schema_documents(
+            enriched_schema,
+            case.question,
+            provider,
+            top_k=1,
+        )
+        [expected] = case.relevant_columns
+        assert (document.schema_name, document.table_name, document.column_name) == (
+            expected.schema_name,
+            expected.table_name,
+            expected.column_name,
+        )
 
 
 @pytest.mark.parametrize("top_k", [0, 1.5, True])
