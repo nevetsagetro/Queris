@@ -13,7 +13,11 @@ from queris.pipeline import FullSchemaSelector
 from queris.retrieval_evaluation import rank_schema_documents
 from queris.schema import DatabaseSchema, introspect_schema
 from queris.schema_embeddings import DeterministicEmbeddingProvider
-from queris.schema_enrichment import load_schema_enrichment, merge_schema_enrichment
+from queris.schema_enrichment import (
+    SchemaEnrichment,
+    load_schema_enrichment,
+    merge_reviewed_schema_enrichment,
+)
 
 NonEmptyString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
@@ -90,12 +94,33 @@ class SchemaCollisionCase(BaseModel):
     expected_outcome: Literal["correct-selection"]
 
 
+class StaleEnrichmentMetadataCase(BaseModel):
+    """One stale metadata reference that must fail before schema documents are embedded."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+    category: Literal["stale-enrichment-metadata"]
+    schema_name: NonEmptyString
+    table_name: NonEmptyString
+    column_name: NonEmptyString | None = None
+    expected_issue: Literal["unknown_schema", "unknown_table", "unknown_column"]
+    expected_outcome: Literal["validation-fails-before-indexing"]
+
+    @model_validator(mode="after")
+    def require_column_only_for_column_issue(self) -> Self:
+        if (self.expected_issue == "unknown_column") != (self.column_name is not None):
+            raise ValueError("only unknown_column cases require column_name")
+        return self
+
+
 AdversarialCase = Annotated[
     DestructiveIntentCase
     | PromptInjectionCase
     | AmbiguousQuestionCase
     | UnanswerableQuestionCase
-    | SchemaCollisionCase,
+    | SchemaCollisionCase
+    | StaleEnrichmentMetadataCase,
     Field(discriminator="category"),
 ]
 
@@ -183,8 +208,28 @@ class SchemaCollisionOutcome(BaseModel):
     passed: bool
 
 
+class StaleEnrichmentMetadataOutcome(BaseModel):
+    """Auditable stale-metadata validation result before retrieval indexing."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    case_id: str
+    category: Literal["stale-enrichment-metadata"]
+    schema_name: str
+    table_name: str
+    column_name: str | None = None
+    expected_issue: Literal["unknown_schema", "unknown_table", "unknown_column"]
+    validation_failed_before_indexing: bool
+    passed: bool
+    error: str | None = None
+
+
 AdversarialOutcome = Annotated[
-    SafetyAdversarialOutcome | AmbiguityOutcome | NoAnswerOutcome | SchemaCollisionOutcome,
+    SafetyAdversarialOutcome
+    | AmbiguityOutcome
+    | NoAnswerOutcome
+    | SchemaCollisionOutcome
+    | StaleEnrichmentMetadataOutcome,
     Field(discriminator="category"),
 ]
 
@@ -288,6 +333,9 @@ def run_adversarial_evaluation(
                 raise RuntimeError("collision schema was not initialized")
             outcomes.append(_evaluate_collision_case(collision_schema, case))
             continue
+        if isinstance(case, StaleEnrichmentMetadataCase):
+            outcomes.append(_evaluate_stale_enrichment_metadata_case(database_path, case))
+            continue
         generator = _AttemptedSQLGenerator(case)
         result = run_agent_loop(
             database_path,
@@ -330,7 +378,7 @@ def _load_collision_schema(
         raise ValueError("schema-collision cases require reviewed enrichment metadata")
     with read_only_connection(database_path) as connection:
         raw_schema = introspect_schema(connection, sample_limit=0)
-    return merge_schema_enrichment(raw_schema, load_schema_enrichment(enrichment_path))
+    return merge_reviewed_schema_enrichment(raw_schema, load_schema_enrichment(enrichment_path))
 
 
 def _evaluate_collision_case(
@@ -362,6 +410,66 @@ def _evaluate_collision_case(
         selected_table=selected.table_name,
         selected_column=selected.column_name,
         passed=passed,
+    )
+
+
+def _evaluate_stale_enrichment_metadata_case(
+    database_path: str | Path,
+    case: StaleEnrichmentMetadataCase,
+) -> StaleEnrichmentMetadataOutcome:
+    with read_only_connection(database_path) as connection:
+        raw_schema = introspect_schema(connection, sample_limit=0)
+    enrichment = _stale_enrichment_from_case(case)
+    error_message = None
+    validation_failed = False
+    try:
+        enriched_schema = merge_reviewed_schema_enrichment(raw_schema, enrichment)
+        rank_schema_documents(
+            enriched_schema,
+            "This must not be embedded with stale metadata.",
+            _ForbiddenEmbeddingProvider(),
+            top_k=1,
+        )
+    except ValueError as error:
+        error_message = str(error)
+        validation_failed = "stale references" in error_message
+
+    return StaleEnrichmentMetadataOutcome(
+        case_id=case.id,
+        category=case.category,
+        schema_name=case.schema_name,
+        table_name=case.table_name,
+        column_name=case.column_name,
+        expected_issue=case.expected_issue,
+        validation_failed_before_indexing=validation_failed,
+        passed=(
+            validation_failed
+            and case.expected_issue in (error_message or "")
+            and case.expected_outcome == "validation-fails-before-indexing"
+        ),
+        error=error_message,
+    )
+
+
+def _stale_enrichment_from_case(case: StaleEnrichmentMetadataCase) -> SchemaEnrichment:
+    table: dict[str, object] = {
+        "schema_name": case.schema_name,
+        "name": case.table_name,
+        "description": "Adversarial stale metadata that must not be activated.",
+    }
+    if case.column_name is not None:
+        table["columns"] = (
+            {
+                "name": case.column_name,
+                "description": "Adversarial stale column metadata.",
+            },
+        )
+    return SchemaEnrichment.model_validate(
+        {
+            "version": 1,
+            "reviewed": True,
+            "tables": (table,),
+        }
     )
 
 
@@ -444,6 +552,16 @@ class _ForbiddenSQLGenerator:
         correction: SQLCorrectionContext | None = None,
     ) -> str:
         raise RuntimeError("unanswerable question reached SQL generation")
+
+
+class _ForbiddenEmbeddingProvider:
+    model = "forbidden-embedding-provider"
+
+    def embed(self, texts: tuple[str, ...]) -> tuple[tuple[float, ...], ...]:
+        raise RuntimeError("stale enrichment metadata reached schema indexing")
+
+    def embed_query(self, text: str) -> tuple[float, ...]:
+        raise RuntimeError("stale enrichment metadata reached schema retrieval")
 
 
 def _schema_contains_source_value(schema: DatabaseSchema, case: PromptInjectionCase) -> bool:

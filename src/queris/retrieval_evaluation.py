@@ -15,7 +15,7 @@ from queris.schema_embeddings import (
     SchemaEmbedding,
     embed_schema,
 )
-from queris.schema_enrichment import load_schema_enrichment, merge_schema_enrichment
+from queris.schema_enrichment import load_schema_enrichment, merge_reviewed_schema_enrichment
 from queris.wide_schema import ColumnReference, RetrievalLabelSet, load_retrieval_labels
 
 
@@ -200,7 +200,10 @@ def main() -> None:
 
     with read_only_connection(args.database) as connection:
         raw_schema = introspect_schema(connection, sample_limit=0)
-    enriched_schema = merge_schema_enrichment(raw_schema, load_schema_enrichment(args.enrichment))
+    enriched_schema = merge_reviewed_schema_enrichment(
+        raw_schema,
+        load_schema_enrichment(args.enrichment),
+    )
     comparison = compare_schema_retrieval(
         raw_schema,
         enriched_schema,

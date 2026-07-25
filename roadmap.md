@@ -7,11 +7,11 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 7 — Adversarial Test Suite (`[~]`)
-- **Latest checkpoint:** added versioned unanswerable-question cases requiring a typed `no_answer` outcome before SQL generation (ADR 0010).
-- **Completed work:** completed Phase 6 plus Phase 7 destructive-intent, prompt-injection-in-data, ambiguous-question, schema-collision, and unanswerable-question categories.
-- **Pending next:** reject incorrect or stale enrichment metadata before indexing.
-- **Resume point:** add stale enrichment metadata cases and require validation to fail before vector indexing or retrieval uses the metadata.
-- **Last updated:** 2026-06-23
+- **Latest checkpoint:** added stale enrichment metadata cases requiring reviewed metadata validation to fail before indexing or retrieval (ADR 0010).
+- **Completed work:** completed Phase 6 plus Phase 7 destructive-intent, prompt-injection-in-data, ambiguous-question, schema-collision, unanswerable-question, and stale-enrichment-metadata categories.
+- **Pending next:** add Phase 7 adversarial cases as a permanent subset of the Phase 6 eval harness.
+- **Resume point:** integrate the Phase 7 adversarial categories into the Phase 6 report with their own pass/fail criteria.
+- **Last updated:** 2026-07-25
 
 ---
 
@@ -127,7 +127,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 - [x] Ambiguous questions (no clear single interpretation) → agent should ask for clarification or state the assumption made, not silently guess (ADR 0010)
 - [x] Similar/colliding column names across tables → correct table must be picked, or the ambiguity surfaced (ADR 0010)
 - [x] Unanswerable questions (data doesn't exist in the schema) → agent must say so, not hallucinate a query (ADR 0010)
-- [ ] Incorrect or stale enrichment metadata → validation must fail before indexing
+- [x] Incorrect or stale enrichment metadata → validation must fail before indexing (ADR 0010)
 - [ ] Add all of the above as a permanent subset of the Phase 6 eval harness, with their own pass/fail criteria
 
 **Exit criteria:** 100% block rate on destructive/injection cases; documented behavior (not necessarily 100% "correct" by human judgment) on ambiguous/unanswerable cases.

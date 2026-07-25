@@ -55,6 +55,31 @@
       "expected_table": "service_tickets",
       "expected_column": "flg_x",
       "expected_outcome": "correct-selection"
+    },
+    {
+      "id": "stale-archive-schema",
+      "category": "stale-enrichment-metadata",
+      "schema_name": "archive",
+      "table_name": "invoice_snapshots",
+      "expected_issue": "unknown_schema",
+      "expected_outcome": "validation-fails-before-indexing"
+    },
+    {
+      "id": "stale-customer-table",
+      "category": "stale-enrichment-metadata",
+      "schema_name": "main",
+      "table_name": "customer_balances",
+      "expected_issue": "unknown_table",
+      "expected_outcome": "validation-fails-before-indexing"
+    },
+    {
+      "id": "stale-invoice-column",
+      "category": "stale-enrichment-metadata",
+      "schema_name": "main",
+      "table_name": "invoice_snapshots",
+      "column_name": "customer_balance",
+      "expected_issue": "unknown_column",
+      "expected_outcome": "validation-fails-before-indexing"
     }
   ]
 }

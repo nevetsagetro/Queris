@@ -205,6 +205,30 @@ def merge_schema_enrichment(
     )
 
 
+def merge_reviewed_schema_enrichment(
+    schema: DatabaseSchema,
+    enrichment: SchemaEnrichment,
+) -> DatabaseSchema:
+    """Merge reviewed semantic metadata, failing closed on stale references."""
+    if not enrichment.reviewed:
+        raise ValueError("schema enrichment must be reviewed before activation")
+    validation = validate_schema_enrichment(schema, enrichment)
+    if not validation.valid:
+        raise ValueError(
+            "schema enrichment contains stale references: "
+            + ", ".join(_format_reference_issue(issue) for issue in validation.issues)
+        )
+    return merge_schema_enrichment(schema, enrichment)
+
+
+def _format_reference_issue(issue: EnrichmentReferenceIssue) -> str:
+    if issue.code == "unknown_schema":
+        return f"unknown_schema {issue.schema_name}"
+    if issue.code == "unknown_table":
+        return f"unknown_table {issue.schema_name}.{issue.table_name}"
+    return f"unknown_column {issue.schema_name}.{issue.table_name}.{issue.column_name}"
+
+
 def _merge_table(
     table: TableSchema,
     metadata: TableEnrichment | None,

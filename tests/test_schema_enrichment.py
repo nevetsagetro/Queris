@@ -8,6 +8,7 @@ from queris.schema import ColumnSchema, DatabaseSchema, TableSchema, introspect_
 from queris.schema_enrichment import (
     SchemaEnrichment,
     load_schema_enrichment,
+    merge_reviewed_schema_enrichment,
     merge_schema_enrichment,
     validate_schema_enrichment,
 )
@@ -229,6 +230,44 @@ def test_merge_schema_enrichment_preserves_introspection_for_partial_metadata() 
     assert orders.columns[1].data_type == "DATE"
     assert orders.columns[1].sample_values == ("2026-01-01",)
     assert merged.tables[1] is schema.tables[1]
+
+
+def test_merge_reviewed_schema_enrichment_rejects_stale_metadata_before_activation() -> None:
+    enrichment = SchemaEnrichment.model_validate(
+        {
+            "version": 1,
+            "reviewed": True,
+            "tables": [
+                {
+                    "schema_name": "main",
+                    "name": "orders",
+                    "columns": [{"name": "customer_id", "description": "Stale column."}],
+                },
+            ],
+        }
+    )
+
+    with pytest.raises(ValueError, match=r"unknown_column main\.orders\.customer_id"):
+        merge_reviewed_schema_enrichment(_schema(), enrichment)
+
+
+def test_merge_reviewed_schema_enrichment_rejects_unreviewed_metadata() -> None:
+    enrichment = SchemaEnrichment.model_validate(
+        {
+            "version": 1,
+            "reviewed": False,
+            "tables": [
+                {
+                    "schema_name": "main",
+                    "name": "orders",
+                    "description": "Unreviewed text.",
+                },
+            ],
+        }
+    )
+
+    with pytest.raises(ValueError, match="reviewed"):
+        merge_reviewed_schema_enrichment(_schema(), enrichment)
 
 
 def test_validate_schema_enrichment_reports_structured_stale_references() -> None:
