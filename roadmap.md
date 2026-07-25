@@ -6,11 +6,11 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 ## Current focus
 
-- **Active stage:** Phase 7 — Adversarial Test Suite (`[x]`; review gate)
-- **Latest checkpoint:** integrated all 27 versioned Phase 7 adversarial cases into the full evaluation report with independent behavior and safety criteria.
-- **Completed work:** completed Phase 6 and every Phase 7 adversarial category, including permanent full-harness execution and historical compatibility checks.
-- **Pending next:** review and merge the Phase 7 completion pull request before starting Phase 8.
-- **Resume point:** after the completion PR is merged, invoke `$queris-start-next-phase` to begin Phase 8 from updated `main`.
+- **Active stage:** Phase 8 — Demo UX (`[~]`)
+- **Latest checkpoint:** added the Streamlit question-to-SQL flow with SQL, result table, automatic chart, and deterministic plain-language explanation.
+- **Completed work:** completed Phase 7 and the initial Phase 8 live demo flow over the existing safe read-only agent loop.
+- **Pending next:** persist each session query and the tables/columns used.
+- **Resume point:** add session-scoped query history with auditable schema sources in the Streamlit demo.
 - **Last updated:** 2026-07-25
 
 ---
@@ -137,7 +137,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Phase 8 — Demo UX
 **Goal:** make the system demoable live, with visualization and explanation, per the README flow.
 
-- [ ] Streamlit app: question input → SQL shown → results table → chart → plain-language explanation
+- [x] Streamlit app: question input → SQL shown → results table → chart → plain-language explanation
 - [ ] Persist query + sources used (tables/columns) per session, per the README's "save the query and sources" requirement
 - [ ] Surface retry count / latency / blocked status in the UI for transparency during demos
 

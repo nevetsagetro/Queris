@@ -17,6 +17,7 @@ dependencies = [
   "pydantic>=2.0",
   "PyYAML>=6.0",
   "sqlglot>=25.0",
+  "streamlit>=1.40,<2.0",
 ]
 
 [project.scripts]
@@ -28,6 +29,7 @@ queris-enrichment-draft = "queris.enrichment_draft:main"
 queris-retrieval-eval = "queris.retrieval_evaluation:main"
 queris-sample-data = "queris.sample_data:main"
 queris-schema = "queris.schema:main"
+queris-demo = "queris.demo:main"
 queris-wide-data = "queris.wide_schema:main"
 
 [project.optional-dependencies]

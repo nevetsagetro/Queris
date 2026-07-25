@@ -39,6 +39,7 @@ Create a virtual environment and install the package with development tools usin
 - `queris-adversarial-eval data/adversarial.duckdb`: run versioned Phase 7 adversarial safety cases.
 - `queris-evaluation-report data/retail.duckdb`: run the full Phase 6 evaluation and write a table plus JSON report.
 - `queris-eval data/retail.duckdb`: run the versioned 10-question baseline and write ignored local JSONL results.
+- `queris-demo`: launch the local Streamlit question-to-SQL demo.
 
 ## Coding Style & Naming Conventions
 
