@@ -39,3 +39,6 @@ jobs:
 
       - name: Run unit tests
         run: python -m pytest
+
+      - name: Run Phase 6/7 evaluation gate
+        run: queris-ci-eval
