@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 8 — Demo UX (`[~]`)
-- **Latest checkpoint:** added session-scoped query history with SQL and live-schema table/column sources extracted from validated queries.
-- **Completed work:** completed Phase 7 plus the Phase 8 Streamlit flow and auditable in-session query/source history.
-- **Pending next:** surface retry count, latency, and blocked status in the demo.
-- **Resume point:** add transparent execution metrics and blocked-state presentation to the Streamlit result flow and history.
+- **Latest checkpoint:** added retry count, total latency, and terminal blocked status to current results and session history.
+- **Completed work:** completed Phase 7 and all three Phase 8 implementation items: Streamlit results, auditable query/source history, and transparent execution metrics.
+- **Pending next:** verify the Phase 8 exit criterion with five representative live demo questions.
+- **Resume point:** define and run the five-question live demo exit check before marking Phase 8 complete.
 - **Last updated:** 2026-07-25
 
 ---
@@ -139,7 +139,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 - [x] Streamlit app: question input → SQL shown → results table → chart → plain-language explanation
 - [x] Persist query + sources used (tables/columns) per session, per the README's "save the query and sources" requirement
-- [ ] Surface retry count / latency / blocked status in the UI for transparency during demos
+- [x] Surface retry count / latency / blocked status in the UI for transparency during demos
 
 **Exit criteria:** a non-technical person can ask 5 example questions live and get correct, explained results.
 

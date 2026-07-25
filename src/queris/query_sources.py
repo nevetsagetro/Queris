@@ -92,9 +92,7 @@ def _column_tables(
     if expression.is_star:
         return tuple(tables)
     return tuple(
-        table
-        for table in tables
-        if any(column.name == column_name for column in table.columns)
+        table for table in tables if any(column.name == column_name for column in table.columns)
     )
 
 

@@ -38,8 +38,12 @@ if st.button("Run query", type="primary", disabled=not question.strip()):
             except Exception as error:  # Streamlit must keep the demo session alive.
                 st.error(f"Query could not be completed: {error}")
             else:
+                st.session_state.query_history.append(session_query_from_result(result))
+                retry_metric, latency_metric, blocked_metric = st.columns(3)
+                retry_metric.metric("Retries", result.retry_count)
+                latency_metric.metric("Latency", f"{result.latency_ms:.1f} ms")
+                blocked_metric.metric("Blocked", "Yes" if result.blocked else "No")
                 if result.status == "success":
-                    st.session_state.query_history.append(session_query_from_result(result))
                     presentation = present_success(result)
                     st.subheader("Generated SQL")
                     st.code(result.sql, language="sql")
@@ -67,10 +71,15 @@ if query_history:
     st.subheader("Session history")
     for entry in reversed(query_history):
         with st.expander(entry.question):
-            st.code(entry.sql, language="sql")
-            st.markdown("**Sources**")
-            if entry.sources:
-                for source in entry.sources:
-                    st.write(format_query_source(source))
-            else:
-                st.write("No base table sources.")
+            st.write(f"Status: {entry.status}")
+            st.write(f"Retries: {entry.retry_count}")
+            st.write(f"Latency: {entry.latency_ms:.1f} ms")
+            st.write(f"Blocked: {'Yes' if entry.blocked else 'No'}")
+            if entry.sql is not None:
+                st.code(entry.sql, language="sql")
+                st.markdown("**Sources**")
+                if entry.sources:
+                    for source in entry.sources:
+                        st.write(format_query_source(source))
+                else:
+                    st.write("No base table sources.")

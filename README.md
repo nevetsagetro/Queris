@@ -2,7 +2,7 @@
 
 ## Current status
 
-🚧 **Phase 8 demo UX is in progress.** Queris now includes a local Streamlit flow from a natural-language question through validated read-only SQL to a results table, automatic chart, and plain-language explanation. Successful queries and their live-schema table/column sources remain auditable in session history. The completed Phase 7 suite remains a permanent part of the full evaluation harness with 27 adversarial cases and independent criteria. Transparent retry, latency, and blocked-status metrics are next. No API exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+🚧 **Phase 8 demo UX implementation is complete; exit validation is pending.** Queris now includes a local Streamlit flow from a natural-language question through validated read-only SQL to a results table, automatic chart, and plain-language explanation. Successful and blocked attempts remain auditable in session history with live-schema sources, retry count, total latency, and blocked status. The completed Phase 7 suite remains a permanent part of the full evaluation harness with 27 adversarial cases and independent criteria. No API exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 
@@ -100,5 +100,7 @@ queris-demo
 Enter the DuckDB path in the sidebar and ask an analytics question. Successful queries show the
 validated SQL, result rows, a chart when at least one numeric field is available, and a concise
 explanation. The session history retains each successful question, SQL statement, and referenced
-live-schema tables and columns. The agent continues to execute through the same read-only validation
-and retry loop used by the evaluation harness.
+live-schema tables and columns, as well as terminal blocked attempts. The current result and history
+show retry count, total latency, and whether validation blocked the final SQL before execution. The
+agent continues to execute through the same read-only validation and retry loop used by the
+evaluation harness.
