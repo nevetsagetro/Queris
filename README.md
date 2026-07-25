@@ -2,7 +2,7 @@
 
 ## Current status
 
-🚧 **Phase 9 productionization is in progress.** Queris exposes its validated read-only agent loop through a typed FastAPI service, includes a non-root Docker Compose deployment, and runs repository hooks plus the full test suite on every pull request to `main`. The completed Phase 8 Streamlit flow remains available, and its versioned five-question live demo evaluation passed 5/5 with `gemini-3.5-flash`. Evaluation regression gates and structured request logging are next. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+🚧 **Phase 9 productionization is in progress.** Queris exposes its validated read-only agent loop through a typed FastAPI service, includes a non-root Docker Compose deployment, and runs repository checks plus a credential-independent Phase 6/7 regression gate on every pull request to `main`. The completed Phase 8 Streamlit flow remains available, and its versioned five-question live demo evaluation passed 5/5 with `gemini-3.5-flash`. Structured request logging is the remaining Phase 9 implementation checkpoint. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 
@@ -87,6 +87,16 @@ compatible prior-run comparison. It writes the latest full report to `evals/resu
 and appends a timestamped report under `evals/results/phase6-history/`. Both locations are ignored
 local audit artifacts. Pass both `--input-usd-per-million` and `--output-usd-per-million` to include
 an explicit-rate cost estimate.
+
+Pull-request CI runs the credential-independent equivalent with:
+
+```bash
+queris-ci-eval
+```
+
+It creates disposable fixtures and requires at least 50 Phase 6 result cases, 24 unsafe-query cases,
+and 27 Phase 7 adversarial cases. Execution accuracy, result accuracy, unsafe-query blocking,
+reviewed adversarial behavior, and adversarial safety blocking must all remain at 100%.
 
 ## Streamlit demo
 

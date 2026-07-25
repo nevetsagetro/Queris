@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 9 — Productionization (`[~]`)
-- **Latest checkpoint:** added pull-request CI for repository hooks and the full pytest suite with pip caching (2026-07-25).
-- **Completed work:** completed Phase 8, exposed and containerized the FastAPI service, and enforced lint plus unit tests on pull requests to `main`.
-- **Pending next:** add the Phase 6/7 evaluation regression gate for pull requests to `main`.
-- **Resume point:** define a credential-independent CI evaluation command and fail the workflow when safety or quality thresholds regress.
+- **Latest checkpoint:** added a credential-independent Phase 6/7 CI gate with strict accuracy, safety, adversarial, and case-count thresholds (2026-07-25).
+- **Completed work:** completed Phase 8, exposed and containerized FastAPI, and enforced repository checks plus deterministic evaluation on pull requests to `main`.
+- **Pending next:** add basic structured request logging with request id, latency, retries, and blocked/allowed status.
+- **Resume point:** instrument the FastAPI boundary with structured completion logs while preserving typed responses and avoiding question, SQL, row, or credential disclosure.
 - **Last updated:** 2026-07-25
 
 ---
@@ -154,7 +154,7 @@ results, non-empty explanations, and zero retries.
 - [x] Wrap the agent pipeline in a FastAPI service with Pydantic request/response models
 - [x] Dockerize (API + DuckDB file or volume)
 - [x] GitHub Actions: run lint + unit tests on every PR
-- [ ] GitHub Actions: run the Phase 6/7 eval suite on every PR to main, failing the build on regressions below a threshold
+- [x] GitHub Actions: run the Phase 6/7 eval suite on every PR to main, failing the build on regressions below a threshold
 - [ ] Basic structured logging (request id, latency, retries, blocked/allowed)
 
 **Exit criteria:** `docker compose up` serves the API; a PR with a deliberately broken validator fails CI via the eval suite.

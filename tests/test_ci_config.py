@@ -41,4 +41,5 @@ def test_quality_workflow_matches_local_verification_commands() -> None:
         "python -m pip install -e '.[dev]'",
         "pre-commit run --all-files",
         "python -m pytest",
+        "queris-ci-eval",
     ]

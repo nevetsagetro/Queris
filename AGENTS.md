@@ -22,6 +22,9 @@ Invoke `$queris-run-demo-eval` when running or recording the Phase 8 five-questi
 evaluation, checking its strict 5/5 result-and-explanation threshold, or investigating a demo
 failure.
 
+Invoke `$queris-run-ci-eval` when reproducing or investigating the credential-independent Phase 6/7
+GitHub Actions regression gate.
+
 When introducing or materially changing a repeatable multi-step repository process, create or update a focused skill under `skills/` and reference it from this file when contributors should invoke it. Keep one-off implementation details in the task or code instead of turning them into skills.
 
 Production code lives under `src/queris/` and tests mirror it in `tests/`. Keep database access, sample setup, schema inspection, SQL validation, and future evaluation concerns in focused modules. Store accepted decisions in `docs/adr/`. Generated databases and credentials never belong in Git.
@@ -46,6 +49,7 @@ Create a virtual environment and install the package with development tools usin
 - `queris-demo`: launch the local Streamlit question-to-SQL demo.
 - `queris-demo-eval data/retail.duckdb`: run the five-question Phase 8 live demo exit evaluation.
 - `queris-api`: serve the typed FastAPI health and safe-query endpoints.
+- `queris-ci-eval`: run the credential-independent Phase 6/7 CI regression gate.
 - `docker compose up --build`: build and serve the API with the configured DuckDB bind mount.
 
 ## Coding Style & Naming Conventions
