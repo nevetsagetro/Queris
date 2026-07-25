@@ -2,7 +2,7 @@
 
 ## Current status
 
-🚧 **Phase 9 productionization is in progress.** Queris now exposes its validated read-only agent loop through a typed FastAPI service with health and query endpoints. The completed Phase 8 Streamlit flow remains available, and its versioned five-question live demo evaluation passed 5/5 with `gemini-3.5-flash`. Docker packaging, CI regression gates, and structured request logging are next. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+🚧 **Phase 9 productionization is in progress.** Queris exposes its validated read-only agent loop through a typed FastAPI service and now includes a non-root container plus Docker Compose configuration with the DuckDB file mounted read-only. The completed Phase 8 Streamlit flow remains available, and its versioned five-question live demo evaluation passed 5/5 with `gemini-3.5-flash`. CI regression gates and structured request logging are next. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 
@@ -128,3 +128,14 @@ queris-api
 `{"question": "How many orders are there?"}` and returns the safe agent's typed terminal result,
 including SQL, rows, sources, retries, latency, and blocked status. Set `QUERIS_DATABASE`,
 `QUERIS_HOST`, or `QUERIS_PORT` to override their local defaults.
+
+To run the same API in a container, create the fixture on the host and start Compose:
+
+```bash
+queris-sample-data data/retail.duckdb
+export GEMINI_API_KEY=...
+docker compose up --build
+```
+
+Compose publishes port `8000` and mounts `data/retail.duckdb` at the container's configured database
+path in read-only mode. Set `QUERIS_DATABASE_PATH` when the host fixture lives elsewhere.

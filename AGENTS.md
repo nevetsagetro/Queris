@@ -28,7 +28,7 @@ Production code lives under `src/queris/` and tests mirror it in `tests/`. Keep 
 
 ## Build, Test, and Development Commands
 
-Create a virtual environment and install the package with development tools using `python -m pip install -e '.[dev]'`. There is no executable service yet. Use these checks:
+Create a virtual environment and install the package with development tools using `python -m pip install -e '.[dev]'`. Use these checks:
 
 - `python -m pytest`: run the complete test suite.
 - `python -m ruff check .`: check Python style and common defects.
@@ -46,6 +46,7 @@ Create a virtual environment and install the package with development tools usin
 - `queris-demo`: launch the local Streamlit question-to-SQL demo.
 - `queris-demo-eval data/retail.duckdb`: run the five-question Phase 8 live demo exit evaluation.
 - `queris-api`: serve the typed FastAPI health and safe-query endpoints.
+- `docker compose up --build`: build and serve the API with the configured DuckDB bind mount.
 
 ## Coding Style & Naming Conventions
 
