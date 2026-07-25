@@ -6,11 +6,11 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 ## Current focus
 
-- **Active stage:** Phase 7 — Adversarial Test Suite (`[~]`)
-- **Latest checkpoint:** added stale enrichment metadata cases requiring reviewed metadata validation to fail before indexing or retrieval (ADR 0010).
-- **Completed work:** completed Phase 6 plus Phase 7 destructive-intent, prompt-injection-in-data, ambiguous-question, schema-collision, unanswerable-question, and stale-enrichment-metadata categories.
-- **Pending next:** add Phase 7 adversarial cases as a permanent subset of the Phase 6 eval harness.
-- **Resume point:** integrate the Phase 7 adversarial categories into the Phase 6 report with their own pass/fail criteria.
+- **Active stage:** Phase 7 — Adversarial Test Suite (`[x]`; review gate)
+- **Latest checkpoint:** integrated all 27 versioned Phase 7 adversarial cases into the full evaluation report with independent behavior and safety criteria.
+- **Completed work:** completed Phase 6 and every Phase 7 adversarial category, including permanent full-harness execution and historical compatibility checks.
+- **Pending next:** review and merge the Phase 7 completion pull request before starting Phase 8.
+- **Resume point:** after the completion PR is merged, invoke `$queris-start-next-phase` to begin Phase 8 from updated `main`.
 - **Last updated:** 2026-07-25
 
 ---
@@ -128,7 +128,7 @@ This is the source of truth for pending decisions, delivery order, and progress.
 - [x] Similar/colliding column names across tables → correct table must be picked, or the ambiguity surfaced (ADR 0010)
 - [x] Unanswerable questions (data doesn't exist in the schema) → agent must say so, not hallucinate a query (ADR 0010)
 - [x] Incorrect or stale enrichment metadata → validation must fail before indexing (ADR 0010)
-- [ ] Add all of the above as a permanent subset of the Phase 6 eval harness, with their own pass/fail criteria
+- [x] Add all of the above as a permanent subset of the Phase 6 eval harness, with their own pass/fail criteria
 
 **Exit criteria:** 100% block rate on destructive/injection cases; documented behavior (not necessarily 100% "correct" by human judgment) on ambiguous/unanswerable cases.
 

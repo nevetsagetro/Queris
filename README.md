@@ -2,7 +2,7 @@
 
 ## Current status
 
-🚧 **Phase 7 adversarial testing is in progress.** Queris can generate deterministic retail and 32-table ambiguous DuckDB fixtures, introspect schemas, request SQL through a replaceable Gemini adapter, validate every statement, execute allowed queries read-only, and score versioned generation and retrieval evaluations. The completed Phase 6 harness runs 50 cases plus reviewed unsafe queries and tracks local historical regressions. Phase 7 blocks destructive and data-injection SQL, surfaces ambiguous and unanswerable questions before generation, and requires exact rank-1 selection among colliding wide-schema columns. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+✅ **Phase 7 adversarial testing is complete.** Queris can generate deterministic retail and 32-table ambiguous DuckDB fixtures, introspect schemas, request SQL through a replaceable Gemini adapter, validate every statement, execute allowed queries read-only, and score versioned generation and retrieval evaluations. The full evaluation harness runs 50 retail cases, reviewed unsafe queries, and 27 permanent adversarial cases with independent criteria while tracking local historical regressions. Phase 7 blocks destructive and data-injection SQL, surfaces ambiguous and unanswerable questions before generation, requires exact rank-1 selection among colliding wide-schema columns, and rejects stale enrichment metadata before indexing. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 
@@ -73,13 +73,17 @@ queris-retrieval-eval data/wide.duckdb metadata/wide-schema.v1.yaml \
 
 ## Phase 6 evaluation
 
-Export `GEMINI_API_KEY`, create the retail fixture, and run the full evaluation with:
+Export `GEMINI_API_KEY`, create the trusted retail and wide-schema fixtures separately, and then run
+the full read-only evaluation with:
 
 ```bash
+queris-sample-data data/retail.duckdb
+queris-wide-data data/wide.duckdb
 queris-evaluation-report data/retail.duckdb
 ```
 
-The command prints the current metric table plus a compatible prior-run comparison, writes the
-latest full report to `evals/results/phase6.json`, and appends a timestamped report under
-`evals/results/phase6-history/`. Both locations are ignored local audit artifacts. Pass both
-`--input-usd-per-million` and `--output-usd-per-million` to include an explicit-rate cost estimate.
+The command prints the current metric table plus independent adversarial pass criteria and a
+compatible prior-run comparison. It writes the latest full report to `evals/results/phase6.json`
+and appends a timestamped report under `evals/results/phase6-history/`. Both locations are ignored
+local audit artifacts. Pass both `--input-usd-per-million` and `--output-usd-per-million` to include
+an explicit-rate cost estimate.

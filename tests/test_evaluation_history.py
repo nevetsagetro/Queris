@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -47,6 +48,22 @@ def test_history_ignores_incompatible_case_sets(
     assert load_latest_compatible_report(tmp_path, _report(phase6_report, minutes=1)) is None
 
 
+def test_history_ignores_reports_from_the_previous_format(
+    tmp_path: Path,
+    phase6_report: EvaluationReport,
+) -> None:
+    previous_payload = phase6_report.model_dump(mode="json")
+    previous_payload["format_version"] = 1
+    previous_payload.pop("adversarial")
+    previous_payload.pop("adversarial_outcomes")
+    (tmp_path / "phase6-v1.json").write_text(
+        json.dumps(previous_payload),
+        encoding="utf-8",
+    )
+
+    assert load_latest_compatible_report(tmp_path, phase6_report) is None
+
+
 def test_comparison_marks_directional_regressions(phase6_report: EvaluationReport) -> None:
     previous = _report(
         phase6_report,
@@ -84,12 +101,17 @@ def test_comparison_rejects_incompatible_reports(phase6_report: EvaluationReport
 
 @pytest.fixture
 def phase6_report(sample_database: Path) -> EvaluationReport:
+    from queris.adversarial_evaluation import (
+        load_adversarial_evaluation_set,
+        run_adversarial_evaluation,
+    )
     from queris.evaluation_metrics import run_accuracy_evaluation
     from queris.evaluation_report import compose_evaluation_report
     from queris.evaluation_set import load_evaluation_set
     from queris.generation import SQLCorrectionContext
     from queris.safety_evaluation import evaluate_unsafe_queries
     from queris.schema import DatabaseSchema
+    from queris.wide_schema import create_wide_schema_database
 
     evaluation_set = load_evaluation_set("evals/retail_v1.json")
     subset = evaluation_set.model_copy(update={"cases": evaluation_set.cases[:2]})
@@ -109,9 +131,22 @@ def phase6_report(sample_database: Path) -> EvaluationReport:
         ReferenceGenerator(),
         sample_limit=0,
     )
+    adversarial_set = load_adversarial_evaluation_set("evals/adversarial_v1.json")
+    wide_adversarial_set = load_adversarial_evaluation_set("evals/adversarial_wide_v1.json")
+    wide_database = create_wide_schema_database(sample_database.parent / "wide.duckdb")
+    adversarial_outcomes = run_adversarial_evaluation(
+        sample_database,
+        adversarial_set,
+    ) + run_adversarial_evaluation(
+        wide_database,
+        wide_adversarial_set,
+        sample_limit=0,
+        enrichment_path="metadata/wide-schema.v1.yaml",
+    )
     return compose_evaluation_report(
         subset,
         outcomes,
         evaluate_unsafe_queries(),
+        adversarial_outcomes,
         generated_at=datetime(2026, 6, 22, tzinfo=UTC),
     )

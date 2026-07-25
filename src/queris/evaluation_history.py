@@ -5,7 +5,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from queris.evaluation_report import EvaluationReport
 
@@ -63,11 +63,15 @@ def load_latest_compatible_report(
     history_directory = Path(directory)
     if not history_directory.exists():
         return None
-    compatible = (
+    reports = tuple(
         report
         for path in history_directory.glob("*.json")
-        if _reports_are_compatible(report := _load_report(path), current)
-        and report.generated_at < current.generated_at
+        if (report := _load_report(path)) is not None
+    )
+    compatible = (
+        report
+        for report in reports
+        if _reports_are_compatible(report, current) and report.generated_at < current.generated_at
     )
     return max(compatible, key=lambda report: report.generated_at, default=None)
 
@@ -176,8 +180,11 @@ def format_comparison_table(comparison: EvaluationComparison) -> str:
     return "\n".join(lines)
 
 
-def _load_report(path: Path) -> EvaluationReport:
-    return EvaluationReport.model_validate_json(path.read_text(encoding="utf-8"))
+def _load_report(path: Path) -> EvaluationReport | None:
+    try:
+        return EvaluationReport.model_validate_json(path.read_text(encoding="utf-8"))
+    except (OSError, ValidationError):
+        return None
 
 
 def _reports_are_compatible(left: EvaluationReport, right: EvaluationReport) -> bool:
@@ -189,6 +196,8 @@ def _reports_are_compatible(left: EvaluationReport, right: EvaluationReport) -> 
         == tuple(outcome.case_id for outcome in right.outcomes)
         and tuple(outcome.case_id for outcome in left.unsafe_query_outcomes)
         == tuple(outcome.case_id for outcome in right.unsafe_query_outcomes)
+        and tuple(outcome.case_id for outcome in left.adversarial_outcomes)
+        == tuple(outcome.case_id for outcome in right.adversarial_outcomes)
     )
 
 

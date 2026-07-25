@@ -8,6 +8,13 @@ from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict
 
+from queris.adversarial_evaluation import (
+    AdversarialOutcome,
+    AdversarialSummary,
+    load_adversarial_evaluation_set,
+    run_adversarial_evaluation,
+    summarize_adversarial_outcomes,
+)
 from queris.agent_loop import DEFAULT_MAX_RETRIES
 from queris.evaluation_metrics import (
     AccuracyMetrics,
@@ -31,20 +38,23 @@ class EvaluationReport(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    format_version: Literal[1] = 1
+    format_version: Literal[2] = 2
     generated_at: AwareDatetime
     dataset_id: str
     fixture: str
     accuracy: AccuracyMetrics
     safety: UnsafeQueryMetrics
+    adversarial: AdversarialSummary
     outcomes: tuple[EvaluationOutcome, ...]
     unsafe_query_outcomes: tuple[UnsafeQueryOutcome, ...]
+    adversarial_outcomes: tuple[AdversarialOutcome, ...]
 
 
 def compose_evaluation_report(
     evaluation_set: EvaluationSet,
     outcomes: tuple[EvaluationOutcome, ...],
     unsafe_query_outcomes: tuple[UnsafeQueryOutcome, ...],
+    adversarial_outcomes: tuple[AdversarialOutcome, ...],
     *,
     generated_at: datetime | None = None,
 ) -> EvaluationReport:
@@ -55,8 +65,10 @@ def compose_evaluation_report(
         fixture=evaluation_set.fixture,
         accuracy=summarize_accuracy(outcomes),
         safety=summarize_unsafe_queries(unsafe_query_outcomes),
+        adversarial=summarize_adversarial_outcomes(adversarial_outcomes),
         outcomes=outcomes,
         unsafe_query_outcomes=unsafe_query_outcomes,
+        adversarial_outcomes=adversarial_outcomes,
     )
 
 
@@ -68,6 +80,10 @@ def format_evaluation_table(report: EvaluationReport) -> str:
         ("Execution accuracy", _percentage(report.accuracy.execution_accuracy)),
         ("Result accuracy", _percentage(report.accuracy.result_accuracy)),
         ("Blocked unsafe queries", _percentage(report.safety.blocked_unsafe_query_rate)),
+        ("Adversarial cases", str(report.adversarial.total)),
+        ("Adversarial behavior", _percentage(report.adversarial.pass_rate)),
+        ("Adversarial safety blocks", _percentage(report.adversarial.block_rate)),
+        ("Adversarial criteria", "pass" if report.adversarial.passed else "fail"),
         ("Average retries", f"{report.accuracy.average_retry_count:.2f}"),
         ("Latency p50", f"{report.accuracy.p50_latency_ms:.2f} ms"),
         ("Latency p95", f"{report.accuracy.p95_latency_ms:.2f} ms"),
@@ -121,6 +137,30 @@ def _build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("evals/results/phase6-history"),
         help="Ignored local directory of timestamped reports",
+    )
+    parser.add_argument(
+        "--adversarial-cases",
+        type=Path,
+        default=Path("evals/adversarial_v1.json"),
+        help="Versioned Phase 7 retail adversarial cases",
+    )
+    parser.add_argument(
+        "--wide-database",
+        type=Path,
+        default=Path("data/wide.duckdb"),
+        help="Existing deterministic wide-schema .duckdb path",
+    )
+    parser.add_argument(
+        "--wide-adversarial-cases",
+        type=Path,
+        default=Path("evals/adversarial_wide_v1.json"),
+        help="Versioned Phase 7 wide-schema adversarial cases",
+    )
+    parser.add_argument(
+        "--wide-enrichment",
+        type=Path,
+        default=Path("metadata/wide-schema.v1.yaml"),
+        help="Reviewed enrichment for wide-schema collision cases",
     )
     parser.add_argument("--samples", type=int, default=3, help="Sample values per column")
     parser.add_argument(
@@ -185,7 +225,22 @@ def main() -> None:
         pricing=pricing,
     )
     unsafe_query_outcomes = evaluate_unsafe_queries()
-    report = compose_evaluation_report(evaluation_set, outcomes, unsafe_query_outcomes)
+    adversarial_set = load_adversarial_evaluation_set(args.adversarial_cases)
+    wide_adversarial_set = load_adversarial_evaluation_set(args.wide_adversarial_cases)
+    adversarial_outcomes = run_adversarial_evaluation(
+        args.database,
+        adversarial_set,
+    ) + run_adversarial_evaluation(
+        args.wide_database,
+        wide_adversarial_set,
+        enrichment_path=args.wide_enrichment,
+    )
+    report = compose_evaluation_report(
+        evaluation_set,
+        outcomes,
+        unsafe_query_outcomes,
+        adversarial_outcomes,
+    )
     previous_report = load_latest_compatible_report(args.history_dir, report)
     history_path = write_historical_report(args.history_dir, report)
     output_path = write_evaluation_report(args.output, report)
@@ -198,6 +253,8 @@ def main() -> None:
         print(format_comparison_table(comparison))
     print(f"JSON report: {output_path}")
     print(f"Historical report: {history_path}")
+    if not report.adversarial.passed:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
