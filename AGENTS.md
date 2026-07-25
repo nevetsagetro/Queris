@@ -45,6 +45,7 @@ Create a virtual environment and install the package with development tools usin
 - `queris-eval data/retail.duckdb`: run the versioned 10-question baseline and write ignored local JSONL results.
 - `queris-demo`: launch the local Streamlit question-to-SQL demo.
 - `queris-demo-eval data/retail.duckdb`: run the five-question Phase 8 live demo exit evaluation.
+- `queris-api`: serve the typed FastAPI health and safe-query endpoints.
 
 ## Coding Style & Naming Conventions
 
