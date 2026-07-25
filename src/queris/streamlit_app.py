@@ -5,6 +5,7 @@ from pathlib import Path
 import streamlit as st
 
 from queris.agent_loop import run_agent_loop
+from queris.demo_history import SessionQuery, format_query_source, session_query_from_result
 from queris.demo_presenter import present_success
 from queris.generation import GeminiSQLGenerator
 from queris.pipeline import FullSchemaSelector
@@ -12,6 +13,9 @@ from queris.pipeline import FullSchemaSelector
 st.set_page_config(page_title="Queris demo", page_icon="🔎", layout="wide")
 st.title("Queris")
 st.caption("Ask an analytics question. Every generated query is validated and executed read-only.")
+
+if "query_history" not in st.session_state:
+    st.session_state.query_history = []
 
 database_path = Path(st.sidebar.text_input("DuckDB database", value="data/retail.duckdb"))
 question = st.text_input(
@@ -35,6 +39,7 @@ if st.button("Run query", type="primary", disabled=not question.strip()):
                 st.error(f"Query could not be completed: {error}")
             else:
                 if result.status == "success":
+                    st.session_state.query_history.append(session_query_from_result(result))
                     presentation = present_success(result)
                     st.subheader("Generated SQL")
                     st.code(result.sql, language="sql")
@@ -55,3 +60,17 @@ if st.button("Run query", type="primary", disabled=not question.strip()):
                     st.warning(result.no_answer)
                 else:
                     st.error(result.explanation or result.error or "The query failed.")
+
+query_history: list[SessionQuery] = st.session_state.query_history
+if query_history:
+    st.divider()
+    st.subheader("Session history")
+    for entry in reversed(query_history):
+        with st.expander(entry.question):
+            st.code(entry.sql, language="sql")
+            st.markdown("**Sources**")
+            if entry.sources:
+                for source in entry.sources:
+                    st.write(format_query_source(source))
+            else:
+                st.write("No base table sources.")

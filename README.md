@@ -2,7 +2,7 @@
 
 ## Current status
 
-🚧 **Phase 8 demo UX is in progress.** Queris now includes a local Streamlit flow from a natural-language question through validated read-only SQL to a results table, automatic chart, and plain-language explanation. The completed Phase 7 suite remains a permanent part of the full evaluation harness with 27 adversarial cases and independent criteria. Session query/source persistence and transparent retry, latency, and blocked-status metrics are next. No API exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+🚧 **Phase 8 demo UX is in progress.** Queris now includes a local Streamlit flow from a natural-language question through validated read-only SQL to a results table, automatic chart, and plain-language explanation. Successful queries and their live-schema table/column sources remain auditable in session history. The completed Phase 7 suite remains a permanent part of the full evaluation harness with 27 adversarial cases and independent criteria. Transparent retry, latency, and blocked-status metrics are next. No API exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 
@@ -99,5 +99,6 @@ queris-demo
 
 Enter the DuckDB path in the sidebar and ask an analytics question. Successful queries show the
 validated SQL, result rows, a chart when at least one numeric field is available, and a concise
-explanation. The agent continues to execute through the same read-only validation and retry loop
-used by the evaluation harness.
+explanation. The session history retains each successful question, SQL statement, and referenced
+live-schema tables and columns. The agent continues to execute through the same read-only validation
+and retry loop used by the evaluation harness.

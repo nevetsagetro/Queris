@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from queris.database import execute_read_only, read_only_connection
 from queris.generation import SQLCorrectionContext
 from queris.pipeline import SchemaSelector
+from queris.query_sources import QuerySource, extract_query_sources
 from queris.schema import DatabaseSchema, introspect_schema
 from queris.sql_validation import SQLValidationError, parse_read_only
 
@@ -56,6 +57,7 @@ class AgentQueryResult(BaseModel):
     sql: str | None
     columns: tuple[str, ...] = ()
     rows: tuple[tuple[Any, ...], ...] = ()
+    sources: tuple[QuerySource, ...] = ()
     failure_stage: FailureStage | None = None
     error: str | None = None
     retry_count: int = Field(ge=0)
@@ -102,6 +104,7 @@ class AgentQueryResult(BaseModel):
             or self.retry_count != 0
             or self.columns
             or self.rows
+            or self.sources
         ):
             raise ValueError("clarification result must terminate before SQL generation")
         elif self.status == "no_answer" and (
@@ -116,6 +119,7 @@ class AgentQueryResult(BaseModel):
             or self.retry_count != 0
             or self.columns
             or self.rows
+            or self.sources
         ):
             raise ValueError("no-answer result must terminate before SQL generation")
         return self
@@ -189,12 +193,14 @@ def run_agent_loop(
         )
 
     failed = state["status"] == "failure"
+    sources = extract_query_sources(state["sql"], schema) if not failed else ()
     return AgentQueryResult(
         status=state["status"],
         question=normalized_question,
         sql=state["sql"],
         columns=state.get("columns", ()),
         rows=state.get("rows", ()),
+        sources=sources,
         failure_stage=state.get("failure_stage"),
         error=state.get("error"),
         retry_count=state["retry_count"],
