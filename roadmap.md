@@ -6,11 +6,11 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 ## Current focus
 
-- **Active stage:** Phase 8 — Demo UX (`[x]`; review gate)
-- **Latest checkpoint:** passed the versioned five-question live demo exit evaluation 5/5 with `gemini-3.5-flash` and no retries (2026-07-25).
-- **Completed work:** completed Phase 7 plus the full Phase 8 Streamlit flow, session audit history, transparent metrics, and strict live result-and-explanation validation.
-- **Pending next:** review and merge the Phase 8 completion pull request before starting Phase 9.
-- **Resume point:** after the completion PR is merged, invoke `$queris-start-next-phase` to begin Phase 9 from updated `main`.
+- **Active stage:** Phase 9 — Productionization (`[~]`)
+- **Latest checkpoint:** added a typed FastAPI boundary with health and safe query endpoints (2026-07-25).
+- **Completed work:** completed Phase 8 and exposed the existing validated agent loop through Pydantic request/response contracts.
+- **Pending next:** Dockerize the API with the DuckDB fixture mounted as a read-only volume.
+- **Resume point:** add the container image and Compose service, then verify `docker compose up` serves `/health` and `/query`.
 - **Last updated:** 2026-07-25
 
 ---
@@ -151,7 +151,7 @@ results, non-empty explanations, and zero retries.
 ## Phase 9 — Productionization
 **Goal:** package it as something that looks deployable, not just a notebook.
 
-- [ ] Wrap the agent pipeline in a FastAPI service with Pydantic request/response models
+- [x] Wrap the agent pipeline in a FastAPI service with Pydantic request/response models
 - [ ] Dockerize (API + DuckDB file or volume)
 - [ ] GitHub Actions: run lint + unit tests on every PR
 - [ ] GitHub Actions: run the Phase 6/7 eval suite on every PR to main, failing the build on regressions below a threshold

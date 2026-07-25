@@ -2,7 +2,7 @@
 
 ## Current status
 
-✅ **Phase 8 demo UX is complete and awaiting review.** Queris now includes a local Streamlit flow from a natural-language question through validated read-only SQL to a results table, automatic chart, and plain-language explanation. Successful and blocked attempts remain auditable in session history with live-schema sources, retry count, total latency, and blocked status. The versioned five-question live demo evaluation passed 5/5 with `gemini-3.5-flash`. The completed Phase 7 suite remains a permanent part of the full evaluation harness with 27 adversarial cases and independent criteria. No API exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+🚧 **Phase 9 productionization is in progress.** Queris now exposes its validated read-only agent loop through a typed FastAPI service with health and query endpoints. The completed Phase 8 Streamlit flow remains available, and its versioned five-question live demo evaluation passed 5/5 with `gemini-3.5-flash`. Docker packaging, CI regression gates, and structured request logging are next. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 
@@ -113,3 +113,18 @@ queris-demo-eval data/retail.duckdb
 
 The ignored local report records the generated SQL, result correctness, explanation, retries,
 latency, blocked state, and any failure details for each reviewed demo question.
+
+## FastAPI service
+
+Export the provider credential, create the retail fixture, and run the local API:
+
+```bash
+export GEMINI_API_KEY=...
+queris-sample-data data/retail.duckdb
+queris-api
+```
+
+`GET /health` reports whether the configured DuckDB file is available. `POST /query` accepts
+`{"question": "How many orders are there?"}` and returns the safe agent's typed terminal result,
+including SQL, rows, sources, retries, latency, and blocked status. Set `QUERIS_DATABASE`,
+`QUERIS_HOST`, or `QUERIS_PORT` to override their local defaults.
