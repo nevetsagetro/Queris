@@ -57,6 +57,9 @@ def test_agent_loop_returns_typed_success(sample_database: Path) -> None:
     assert result.sql == generator.sql_attempts[0]
     assert result.columns == ("order_count",)
     assert result.rows == ((4,),)
+    assert len(result.sources) == 1
+    assert result.sources[0].table_name == "orders"
+    assert result.sources[0].columns == ("*",)
     assert result.failure_stage is None
     assert result.error is None
     assert result.retry_count == 0
