@@ -2,7 +2,7 @@
 
 ## Current status
 
-🚧 **Phase 9 productionization is in progress.** Queris exposes its validated read-only agent loop through a typed FastAPI service and now includes a non-root container plus Docker Compose configuration with the DuckDB file mounted read-only. The completed Phase 8 Streamlit flow remains available, and its versioned five-question live demo evaluation passed 5/5 with `gemini-3.5-flash`. CI regression gates and structured request logging are next. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+🚧 **Phase 9 productionization is in progress.** Queris exposes its validated read-only agent loop through a typed FastAPI service, includes a non-root Docker Compose deployment, and runs repository hooks plus the full test suite on every pull request to `main`. The completed Phase 8 Streamlit flow remains available, and its versioned five-question live demo evaluation passed 5/5 with `gemini-3.5-flash`. Evaluation regression gates and structured request logging are next. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 
