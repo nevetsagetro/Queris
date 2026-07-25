@@ -2,7 +2,7 @@
 
 ## Current status
 
-✅ **Phase 7 adversarial testing is complete.** Queris can generate deterministic retail and 32-table ambiguous DuckDB fixtures, introspect schemas, request SQL through a replaceable Gemini adapter, validate every statement, execute allowed queries read-only, and score versioned generation and retrieval evaluations. The full evaluation harness runs 50 retail cases, reviewed unsafe queries, and 27 permanent adversarial cases with independent criteria while tracking local historical regressions. Phase 7 blocks destructive and data-injection SQL, surfaces ambiguous and unanswerable questions before generation, requires exact rank-1 selection among colliding wide-schema columns, and rejects stale enrichment metadata before indexing. No API or frontend exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+🚧 **Phase 8 demo UX is in progress.** Queris now includes a local Streamlit flow from a natural-language question through validated read-only SQL to a results table, automatic chart, and plain-language explanation. The completed Phase 7 suite remains a permanent part of the full evaluation harness with 27 adversarial cases and independent criteria. Session query/source persistence and transparent retry, latency, and blocked-status metrics are next. No API exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 
@@ -87,3 +87,17 @@ compatible prior-run comparison. It writes the latest full report to `evals/resu
 and appends a timestamped report under `evals/results/phase6-history/`. Both locations are ignored
 local audit artifacts. Pass both `--input-usd-per-million` and `--output-usd-per-million` to include
 an explicit-rate cost estimate.
+
+## Streamlit demo
+
+Export `GEMINI_API_KEY`, create the retail fixture, and launch the local demo:
+
+```bash
+queris-sample-data data/retail.duckdb
+queris-demo
+```
+
+Enter the DuckDB path in the sidebar and ask an analytics question. Successful queries show the
+validated SQL, result rows, a chart when at least one numeric field is available, and a concise
+explanation. The agent continues to execute through the same read-only validation and retry loop
+used by the evaluation harness.
