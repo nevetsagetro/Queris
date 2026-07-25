@@ -6,11 +6,11 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 ## Current focus
 
-- **Active stage:** Phase 9 — Productionization (`[x]`; review gate)
-- **Latest checkpoint:** added privacy-preserving structured request logs and a CI Compose smoke test for the containerized API (2026-07-25).
-- **Completed work:** completed every Phase 9 implementation item: typed FastAPI, Docker Compose, PR quality checks, deterministic evaluation gates, and structured logging.
-- **Pending next:** review and merge the Phase 9 completion pull request after its quality, evaluation, and Compose smoke checks pass.
-- **Resume point:** after the completion PR is merged, invoke `$queris-start-next-phase` from updated `main` to assess the optional Phase 10 stretch goals.
+- **Active stage:** Portfolio-ready delivery (`[x]`)
+- **Latest checkpoint:** smoke-tested Streamlit and FastAPI locally and prepared the recruiter-facing project overview (2026-07-25).
+- **Completed work:** completed and merged Phases 0–9, including the safe agent, evaluation harness, demo, API, container, CI gates, and structured logging.
+- **Pending next:** none for the accepted portfolio scope; optional Phase 10 is intentionally not planned.
+- **Resume point:** maintenance only—preserve the safety boundaries and evaluation thresholds when fixing defects or updating dependencies.
 - **Last updated:** 2026-07-25
 
 ---
@@ -162,6 +162,8 @@ results, non-empty explanations, and zero retries.
 ---
 
 ## Phase 10 — Stretch Goals (optional, post-portfolio-ready)
+**Status:** intentionally not planned for the accepted portfolio scope.
+
 - [ ] React/TypeScript frontend replacing/complementing Streamlit
 - [ ] Multi-dataset support (schema switch at runtime)
 - [ ] Voice question input through Whisper-compatible speech-to-text, feeding the transcript into the existing validated natural-language query pipeline
