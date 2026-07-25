@@ -42,3 +42,17 @@ jobs:
 
       - name: Run Phase 6/7 evaluation gate
         run: queris-ci-eval
+
+      - name: Start containerized API
+        env:
+          QUERIS_DATABASE_PATH: /tmp/queris-ci-retail.duckdb
+        run: |
+          queris-sample-data "$QUERIS_DATABASE_PATH"
+          docker compose up --build --detach --wait
+          python -c "import json, urllib.request; response = urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2); assert json.load(response) == {'status': 'ok', 'database_available': True}"
+
+      - name: Stop containerized API
+        if: always()
+        env:
+          QUERIS_DATABASE_PATH: /tmp/queris-ci-retail.duckdb
+        run: docker compose down
