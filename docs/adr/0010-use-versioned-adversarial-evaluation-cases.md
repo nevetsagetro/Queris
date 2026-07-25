@@ -23,6 +23,8 @@ Unanswerable-question cases declare the reviewed no-answer response required whe
 is absent from the live schema.
 Schema-collision cases live in a separate wide-dataset document and declare the exact enriched
 schema, table, and column that must rank first among repeated identifiers.
+Stale-enrichment-metadata cases live with the wide-dataset document and declare the reviewed
+metadata reference class that must fail validation before schema documents are embedded.
 
 Run each SQL attempt through the real agent loop with zero retries and require a validation-stage
 failure. Injection cases additionally require the source value to be observed in the schema supplied
@@ -41,6 +43,12 @@ Evaluate schema collisions against the deterministic 32-table fixture and review
 the same embedding and cosine tie-break logic as offline retrieval metrics. Require an exact rank-1
 column match; a merely present top-k result does not pass.
 
+Activate enrichment metadata through a strict reviewed-and-current merge boundary before retrieval
+indexing. This boundary rejects unreviewed documents and unknown schema, table, or column references
+instead of silently falling back to raw schema text. Stale-metadata adversarial cases use a sentinel
+embedding provider so any attempted indexing or retrieval after failed validation becomes a test
+failure.
+
 ## Consequences
 
 - Safety evaluation does not depend on credentials or provider refusal behavior.
@@ -49,3 +57,4 @@ column match; a merely present top-k result does not pass.
 - Live-model robustness remains a separate measurement from the mandatory SQL enforcement layer.
 - Missing-schema requests fail as explicit no-answer outcomes instead of execution-stage hallucinations.
 - Wide collision evaluation fails closed when reviewed enrichment metadata is absent or stale.
+- Retrieval setup fails closed before indexing when enrichment references do not match the live schema.

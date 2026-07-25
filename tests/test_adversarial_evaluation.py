@@ -38,9 +38,10 @@ def test_versioned_collision_cases_are_unique() -> None:
     evaluation_set = load_adversarial_evaluation_set(WIDE_ADVERSARIAL_SET_PATH)
 
     assert evaluation_set.dataset_id == "wide-v1"
-    assert len(evaluation_set.cases) == 6
-    assert len({case.id for case in evaluation_set.cases}) == 6
-    assert all(case.category == "schema-collision" for case in evaluation_set.cases)
+    assert len(evaluation_set.cases) == 9
+    assert len({case.id for case in evaluation_set.cases}) == 9
+    assert [case.category for case in evaluation_set.cases].count("schema-collision") == 6
+    assert [case.category for case in evaluation_set.cases].count("stale-enrichment-metadata") == 3
 
 
 def test_destructive_intent_is_blocked_before_execution(
@@ -166,10 +167,17 @@ def test_unanswerable_cases_return_no_answer_before_generation(sample_database: 
 def test_collision_cases_select_exact_enriched_column(tmp_path: Path) -> None:
     database = create_wide_schema_database(tmp_path / "wide.duckdb")
     evaluation_set = load_adversarial_evaluation_set(WIDE_ADVERSARIAL_SET_PATH)
+    collision_set = evaluation_set.model_copy(
+        update={
+            "cases": tuple(
+                case for case in evaluation_set.cases if case.category == "schema-collision"
+            )
+        }
+    )
 
     outcomes = run_adversarial_evaluation(
         database,
-        evaluation_set,
+        collision_set,
         enrichment_path=WIDE_ENRICHMENT_PATH,
     )
 
@@ -183,9 +191,43 @@ def test_collision_cases_select_exact_enriched_column(tmp_path: Path) -> None:
 def test_collision_cases_require_reviewed_enrichment(tmp_path: Path) -> None:
     database = create_wide_schema_database(tmp_path / "wide.duckdb")
     evaluation_set = load_adversarial_evaluation_set(WIDE_ADVERSARIAL_SET_PATH)
+    collision_set = evaluation_set.model_copy(
+        update={
+            "cases": tuple(
+                case for case in evaluation_set.cases if case.category == "schema-collision"
+            )
+        }
+    )
 
     with pytest.raises(ValueError, match="enrichment"):
-        run_adversarial_evaluation(database, evaluation_set)
+        run_adversarial_evaluation(database, collision_set)
+
+
+def test_stale_enrichment_metadata_fails_before_indexing(tmp_path: Path) -> None:
+    database = create_wide_schema_database(tmp_path / "wide.duckdb")
+    evaluation_set = load_adversarial_evaluation_set(WIDE_ADVERSARIAL_SET_PATH)
+    stale_set = evaluation_set.model_copy(
+        update={
+            "cases": tuple(
+                case
+                for case in evaluation_set.cases
+                if case.category == "stale-enrichment-metadata"
+            )
+        }
+    )
+
+    outcomes = run_adversarial_evaluation(database, stale_set)
+    summary = summarize_adversarial_outcomes(outcomes)
+
+    assert len(outcomes) == 3
+    assert all(outcome.validation_failed_before_indexing for outcome in outcomes)
+    assert [outcome.expected_issue for outcome in outcomes] == [
+        "unknown_schema",
+        "unknown_table",
+        "unknown_column",
+    ]
+    assert all(outcome.passed for outcome in outcomes)
+    assert summary.passed is True
 
 
 def test_adversarial_set_rejects_duplicate_ids(tmp_path: Path) -> None:
@@ -253,6 +295,7 @@ def test_cli_writes_passing_collision_report(
 
     payload = json.loads(output_path.read_text(encoding="utf-8"))
     assert payload["dataset_id"] == "wide-v1"
-    assert payload["summary"]["passed_cases"] == 6
+    assert payload["summary"]["passed_cases"] == 9
     assert payload["summary"]["passed"] is True
+    assert len(payload["outcomes"]) == 9
     assert f"{output_path}\n" in capsys.readouterr().out
