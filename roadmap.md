@@ -7,10 +7,10 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Phase 9 — Productionization (`[~]`)
-- **Latest checkpoint:** packaged the API for Docker Compose with a non-root image and read-only DuckDB bind mount (2026-07-25).
-- **Completed work:** completed Phase 8, exposed the validated agent loop through FastAPI, and added container packaging with configuration tests.
-- **Pending next:** add GitHub Actions lint and unit-test checks for every pull request.
-- **Resume point:** create the first CI workflow for pre-commit and the full pytest suite, with dependency caching.
+- **Latest checkpoint:** added pull-request CI for repository hooks and the full pytest suite with pip caching (2026-07-25).
+- **Completed work:** completed Phase 8, exposed and containerized the FastAPI service, and enforced lint plus unit tests on pull requests to `main`.
+- **Pending next:** add the Phase 6/7 evaluation regression gate for pull requests to `main`.
+- **Resume point:** define a credential-independent CI evaluation command and fail the workflow when safety or quality thresholds regress.
 - **Last updated:** 2026-07-25
 
 ---
@@ -153,7 +153,7 @@ results, non-empty explanations, and zero retries.
 
 - [x] Wrap the agent pipeline in a FastAPI service with Pydantic request/response models
 - [x] Dockerize (API + DuckDB file or volume)
-- [ ] GitHub Actions: run lint + unit tests on every PR
+- [x] GitHub Actions: run lint + unit tests on every PR
 - [ ] GitHub Actions: run the Phase 6/7 eval suite on every PR to main, failing the build on regressions below a threshold
 - [ ] Basic structured logging (request id, latency, retries, blocked/allowed)
 

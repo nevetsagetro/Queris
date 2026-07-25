@@ -61,6 +61,7 @@ Version and review schema-enrichment metadata before indexing. Test stale refere
 ## Commit & Pull Request Guidelines
 
 Follow `CONTRIBUTING.md`: branch from updated `main`, use typed kebab-case names, and write Conventional Commit subjects such as `feat(sql): reject stacked statements`. Keep commits focused. Pull requests explain the problem, implementation, verification, and security-impacting changes.
+The `Quality` GitHub Actions workflow runs repository hooks and the full pytest suite on pull requests to `main`.
 
 ## Security & Configuration
 
