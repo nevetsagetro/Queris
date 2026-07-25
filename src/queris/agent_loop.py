@@ -1,6 +1,7 @@
 """Typed LangGraph foundation for bounded text-to-SQL orchestration."""
 
 from pathlib import Path
+from time import perf_counter
 from typing import Any, Literal, NotRequired, Protocol, Self, TypedDict
 
 import duckdb
@@ -61,11 +62,17 @@ class AgentQueryResult(BaseModel):
     failure_stage: FailureStage | None = None
     error: str | None = None
     retry_count: int = Field(ge=0)
+    latency_ms: float = Field(default=0, ge=0)
     retries_exhausted: bool = False
     explanation: str | None = None
     clarification: str | None = None
     assumption: str | None = None
     no_answer: str | None = None
+
+    @property
+    def blocked(self) -> bool:
+        """Return whether validation blocked the terminal SQL before execution."""
+        return self.status == "failure" and self.failure_stage == "validation"
 
     @model_validator(mode="after")
     def require_consistent_terminal_state(self) -> Self:
@@ -152,6 +159,7 @@ def run_agent_loop(
     """Run generate, validate, and execute with a bounded correction loop."""
     normalized_question = _normalize_question(question)
     _validate_max_retries(max_retries)
+    started_at = perf_counter()
 
     with read_only_connection(database_path) as connection:
         schema = introspect_schema(connection, sample_limit=sample_limit)
@@ -164,6 +172,7 @@ def run_agent_loop(
                 question=normalized_question,
                 sql=None,
                 retry_count=0,
+                latency_ms=_elapsed_ms(started_at),
                 clarification=resolution.message,
             )
         if resolution is not None and resolution.kind == "no_answer":
@@ -172,6 +181,7 @@ def run_agent_loop(
                 question=normalized_question,
                 sql=None,
                 retry_count=0,
+                latency_ms=_elapsed_ms(started_at),
                 no_answer=resolution.message,
             )
         assumption = resolution.message if resolution is not None else None
@@ -204,6 +214,7 @@ def run_agent_loop(
         failure_stage=state.get("failure_stage"),
         error=state.get("error"),
         retry_count=state["retry_count"],
+        latency_ms=_elapsed_ms(started_at),
         retries_exhausted=failed,
         explanation=_build_exhaustion_explanation(state["retry_count"]) if failed else None,
         assumption=assumption,
@@ -318,3 +329,7 @@ def _build_exhaustion_explanation(retry_count: int) -> str:
     attempts = retry_count + 1
     label = "attempt" if attempts == 1 else "attempts"
     return f"Could not produce executable read-only SQL after {attempts} {label}."
+
+
+def _elapsed_ms(started_at: float) -> float:
+    return (perf_counter() - started_at) * 1000

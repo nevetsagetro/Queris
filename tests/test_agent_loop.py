@@ -71,6 +71,24 @@ def test_agent_loop_returns_typed_success(sample_database: Path) -> None:
     assert generator.calls[0][2] is None
 
 
+def test_agent_loop_records_total_latency(
+    sample_database: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    readings = iter((10.0, 10.125))
+    monkeypatch.setattr(agent_loop, "perf_counter", lambda: next(readings))
+
+    result = run_agent_loop(
+        sample_database,
+        "How many orders are there?",
+        FakeGenerator("SELECT COUNT(*) FROM orders"),
+        FullSchemaSelector(),
+        sample_limit=0,
+    )
+
+    assert result.latency_ms == pytest.approx(125)
+
+
 def test_agent_loop_requests_clarification_before_generation(
     sample_database: Path,
     monkeypatch: pytest.MonkeyPatch,

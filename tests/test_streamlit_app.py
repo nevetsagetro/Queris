@@ -40,7 +40,8 @@ def test_streamlit_app_retains_successful_query_and_sources(
         columns=("order_count",),
         rows=((4,),),
         sources=(QuerySource(schema_name="main", table_name="orders", columns=("*",)),),
-        retry_count=0,
+        retry_count=1,
+        latency_ms=12.5,
     )
     monkeypatch.setattr(generation, "GeminiSQLGenerator", lambda: object())
     monkeypatch.setattr(agent_loop, "run_agent_loop", lambda *args, **kwargs: result)
@@ -51,7 +52,47 @@ def test_streamlit_app_retains_successful_query_and_sources(
     app.button[0].click().run()
 
     assert app.subheader[-1].value == "Session history"
+    assert tuple((metric.label, metric.value) for metric in app.metric) == (
+        ("Retries", "1"),
+        ("Latency", "12.5 ms"),
+        ("Blocked", "No"),
+    )
     assert app.expander[0].label == result.question
     assert app.expander[0].code[0].value == result.sql
-    assert app.expander[0].markdown[0].value == "**Sources**"
-    assert app.expander[0].markdown[1].value == "main.orders: *"
+    assert app.expander[0].markdown[0].value == "Status: success"
+    assert app.expander[0].markdown[3].value == "Blocked: No"
+    assert app.expander[0].markdown[4].value == "**Sources**"
+    assert app.expander[0].markdown[5].value == "main.orders: *"
+
+
+def test_streamlit_app_surfaces_and_retains_blocked_status(
+    sample_database: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    result = AgentQueryResult(
+        status="failure",
+        question="Delete every order",
+        sql="DELETE FROM orders",
+        failure_stage="validation",
+        error="Forbidden SQL operation: DELETE",
+        retry_count=3,
+        latency_ms=8.25,
+        retries_exhausted=True,
+        explanation="Could not produce executable read-only SQL after 4 attempts.",
+    )
+    monkeypatch.setattr(generation, "GeminiSQLGenerator", lambda: object())
+    monkeypatch.setattr(agent_loop, "run_agent_loop", lambda *args, **kwargs: result)
+
+    app = AppTest.from_file(str(APP_PATH)).run()
+    app.sidebar.text_input[0].set_value(str(sample_database))
+    app.text_input[0].set_value(result.question)
+    app.button[0].click().run()
+
+    assert tuple((metric.label, metric.value) for metric in app.metric) == (
+        ("Retries", "3"),
+        ("Latency", "8.2 ms"),
+        ("Blocked", "Yes"),
+    )
+    assert app.error[0].value == result.explanation
+    assert app.expander[0].markdown[0].value == "Status: failure"
+    assert app.expander[0].markdown[3].value == "Blocked: Yes"

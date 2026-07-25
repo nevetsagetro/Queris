@@ -1,6 +1,8 @@
 """Session-scoped audit history for the Streamlit demo."""
 
-from pydantic import BaseModel, ConfigDict
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from queris.agent_loop import AgentQueryResult
 from queris.query_sources import QuerySource
@@ -12,18 +14,24 @@ class SessionQuery(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     question: str
-    sql: str
+    status: Literal["success", "failure", "clarification", "no_answer"]
+    sql: str | None
     sources: tuple[QuerySource, ...]
+    retry_count: int = Field(ge=0)
+    latency_ms: float = Field(ge=0)
+    blocked: bool
 
 
 def session_query_from_result(result: AgentQueryResult) -> SessionQuery:
-    """Create an auditable session record from a successful agent result."""
-    if result.status != "success" or result.sql is None:
-        raise ValueError("only successful query results can be recorded")
+    """Create an auditable session record from one terminal agent result."""
     return SessionQuery(
         question=result.question,
+        status=result.status,
         sql=result.sql,
         sources=result.sources,
+        retry_count=result.retry_count,
+        latency_ms=result.latency_ms,
+        blocked=result.blocked,
     )
 
 
