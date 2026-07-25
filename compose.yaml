@@ -1,0 +1,16 @@
+services:
+  api:
+    build:
+      context: .
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      QUERIS_DATABASE: /data/retail.duckdb
+    ports:
+      - "8000:8000"
+    volumes:
+      - type: bind
+        source: ${QUERIS_DATABASE_PATH:-./data/retail.duckdb}
+        target: /data/retail.duckdb
+        read_only: true
+    init: true
+    restart: unless-stopped
