@@ -18,6 +18,10 @@ Invoke `$queris-run-adversarial-eval` when running or recording Phase 7 destruct
 prompt-injection-in-data, ambiguous-question, unanswerable-question, or wide-schema collision
 cases; checking safety and documented-behavior thresholds; or investigating an adversarial failure.
 
+Invoke `$queris-run-demo-eval` when running or recording the Phase 8 five-question live demo exit
+evaluation, checking its strict 5/5 result-and-explanation threshold, or investigating a demo
+failure.
+
 When introducing or materially changing a repeatable multi-step repository process, create or update a focused skill under `skills/` and reference it from this file when contributors should invoke it. Keep one-off implementation details in the task or code instead of turning them into skills.
 
 Production code lives under `src/queris/` and tests mirror it in `tests/`. Keep database access, sample setup, schema inspection, SQL validation, and future evaluation concerns in focused modules. Store accepted decisions in `docs/adr/`. Generated databases and credentials never belong in Git.
@@ -40,6 +44,7 @@ Create a virtual environment and install the package with development tools usin
 - `queris-evaluation-report data/retail.duckdb`: run the full Phase 6 evaluation and write a table plus JSON report.
 - `queris-eval data/retail.duckdb`: run the versioned 10-question baseline and write ignored local JSONL results.
 - `queris-demo`: launch the local Streamlit question-to-SQL demo.
+- `queris-demo-eval data/retail.duckdb`: run the five-question Phase 8 live demo exit evaluation.
 
 ## Coding Style & Naming Conventions
 

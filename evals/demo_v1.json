@@ -1,0 +1,95 @@
+{
+  "format_version": 1,
+  "dataset_id": "retail-v1",
+  "fixture": "queris.sample_data:create_sample_database",
+  "cases": [
+    {
+      "id": "total-orders",
+      "category": "simple-aggregation",
+      "question": "How many orders are there?",
+      "expected_sql": "SELECT COUNT(*) AS order_count FROM orders",
+      "expected_columns": [
+        "order_count"
+      ],
+      "expected_rows": [
+        [
+          4
+        ]
+      ]
+    },
+    {
+      "id": "revenue-by-category",
+      "category": "multi-table-join",
+      "question": "What is the total revenue for each product category? Return the category name and revenue.",
+      "expected_sql": "SELECT categories.name AS category_name, SUM(order_items.revenue) AS revenue FROM categories JOIN products USING (category_id) JOIN order_items USING (product_id) GROUP BY categories.name",
+      "expected_columns": [
+        "category_name",
+        "revenue"
+      ],
+      "expected_rows": [
+        [
+          "Office",
+          68.0
+        ],
+        [
+          "Technology",
+          200.0
+        ],
+        [
+          "Furniture",
+          200.0
+        ]
+      ]
+    },
+    {
+      "id": "first-quarter-revenue",
+      "category": "time-filtering",
+      "question": "What was total revenue in the first quarter of 2026?",
+      "expected_sql": "SELECT SUM(order_items.revenue) AS revenue FROM orders JOIN order_items USING (order_id) WHERE order_date >= DATE '2026-01-01' AND order_date < DATE '2026-04-01'",
+      "expected_columns": [
+        "revenue"
+      ],
+      "expected_rows": [
+        [
+          310.0
+        ]
+      ]
+    },
+    {
+      "id": "negative-margin-categories",
+      "category": "group-by-having",
+      "question": "Which product categories have negative total gross profit? Return the category name and gross profit.",
+      "expected_sql": "SELECT categories.name AS category_name, SUM(order_items.revenue - order_items.cost) AS gross_profit FROM categories JOIN products USING (category_id) JOIN order_items USING (product_id) GROUP BY categories.name HAVING SUM(order_items.revenue - order_items.cost) < 0",
+      "expected_columns": [
+        "category_name",
+        "gross_profit"
+      ],
+      "expected_rows": [
+        [
+          "Furniture",
+          -20.0
+        ]
+      ]
+    },
+    {
+      "id": "top-revenue-products",
+      "category": "nested-subquery",
+      "question": "Which products are tied for the highest total revenue? Return every tied product name and its revenue.",
+      "expected_sql": "WITH product_revenue AS (SELECT products.name AS product_name, SUM(order_items.revenue) AS revenue FROM products JOIN order_items USING (product_id) GROUP BY products.name) SELECT product_name, revenue FROM product_revenue WHERE revenue = (SELECT MAX(revenue) FROM product_revenue)",
+      "expected_columns": [
+        "product_name",
+        "revenue"
+      ],
+      "expected_rows": [
+        [
+          "Keyboard",
+          200.0
+        ],
+        [
+          "Desk",
+          200.0
+        ]
+      ]
+    }
+  ]
+}

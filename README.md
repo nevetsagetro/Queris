@@ -2,7 +2,7 @@
 
 ## Current status
 
-🚧 **Phase 8 demo UX implementation is complete; exit validation is pending.** Queris now includes a local Streamlit flow from a natural-language question through validated read-only SQL to a results table, automatic chart, and plain-language explanation. Successful and blocked attempts remain auditable in session history with live-schema sources, retry count, total latency, and blocked status. The completed Phase 7 suite remains a permanent part of the full evaluation harness with 27 adversarial cases and independent criteria. No API exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+✅ **Phase 8 demo UX is complete and awaiting review.** Queris now includes a local Streamlit flow from a natural-language question through validated read-only SQL to a results table, automatic chart, and plain-language explanation. Successful and blocked attempts remain auditable in session history with live-schema sources, retry count, total latency, and blocked status. The versioned five-question live demo evaluation passed 5/5 with `gemini-3.5-flash`. The completed Phase 7 suite remains a permanent part of the full evaluation harness with 27 adversarial cases and independent criteria. No API exists yet. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 
@@ -104,3 +104,12 @@ live-schema tables and columns, as well as terminal blocked attempts. The curren
 show retry count, total latency, and whether validation blocked the final SQL before execution. The
 agent continues to execute through the same read-only validation and retry loop used by the
 evaluation harness.
+
+Run the strict five-question live demo exit evaluation with:
+
+```bash
+queris-demo-eval data/retail.duckdb
+```
+
+The ignored local report records the generated SQL, result correctness, explanation, retries,
+latency, blocked state, and any failure details for each reviewed demo question.

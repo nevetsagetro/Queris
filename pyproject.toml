@@ -23,6 +23,7 @@ dependencies = [
 [project.scripts]
 queris-adversarial-eval = "queris.adversarial_evaluation:main"
 queris-agent-eval = "queris.agent_evaluation:main"
+queris-demo-eval = "queris.demo_evaluation:main"
 queris-eval = "queris.evaluation:main"
 queris-evaluation-report = "queris.evaluation_report:main"
 queris-enrichment-draft = "queris.enrichment_draft:main"
