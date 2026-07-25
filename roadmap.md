@@ -6,11 +6,11 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 ## Current focus
 
-- **Active stage:** Phase 9 — Productionization (`[~]`)
-- **Latest checkpoint:** added a credential-independent Phase 6/7 CI gate with strict accuracy, safety, adversarial, and case-count thresholds (2026-07-25).
-- **Completed work:** completed Phase 8, exposed and containerized FastAPI, and enforced repository checks plus deterministic evaluation on pull requests to `main`.
-- **Pending next:** add basic structured request logging with request id, latency, retries, and blocked/allowed status.
-- **Resume point:** instrument the FastAPI boundary with structured completion logs while preserving typed responses and avoiding question, SQL, row, or credential disclosure.
+- **Active stage:** Phase 9 — Productionization (`[x]`; review gate)
+- **Latest checkpoint:** added privacy-preserving structured request logs and a CI Compose smoke test for the containerized API (2026-07-25).
+- **Completed work:** completed every Phase 9 implementation item: typed FastAPI, Docker Compose, PR quality checks, deterministic evaluation gates, and structured logging.
+- **Pending next:** review and merge the Phase 9 completion pull request after its quality, evaluation, and Compose smoke checks pass.
+- **Resume point:** after the completion PR is merged, invoke `$queris-start-next-phase` from updated `main` to assess the optional Phase 10 stretch goals.
 - **Last updated:** 2026-07-25
 
 ---
@@ -155,7 +155,7 @@ results, non-empty explanations, and zero retries.
 - [x] Dockerize (API + DuckDB file or volume)
 - [x] GitHub Actions: run lint + unit tests on every PR
 - [x] GitHub Actions: run the Phase 6/7 eval suite on every PR to main, failing the build on regressions below a threshold
-- [ ] Basic structured logging (request id, latency, retries, blocked/allowed)
+- [x] Basic structured logging (request id, latency, retries, blocked/allowed)
 
 **Exit criteria:** `docker compose up` serves the API; a PR with a deliberately broken validator fails CI via the eval suite.
 

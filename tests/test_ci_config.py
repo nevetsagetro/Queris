@@ -35,11 +35,13 @@ def test_quality_workflow_uses_cached_supported_python() -> None:
 
 def test_quality_workflow_matches_local_verification_commands() -> None:
     steps = load_quality_workflow()["jobs"]["checks"]["steps"]
-    commands = [step["run"] for step in steps if "run" in step]
+    commands = {step["name"]: step["run"] for step in steps if "run" in step}
 
-    assert commands == [
-        "python -m pip install -e '.[dev]'",
-        "pre-commit run --all-files",
-        "python -m pytest",
-        "queris-ci-eval",
-    ]
+    assert commands["Install package and development tools"] == "python -m pip install -e '.[dev]'"
+    assert commands["Run repository hooks"] == "pre-commit run --all-files"
+    assert commands["Run unit tests"] == "python -m pytest"
+    assert commands["Run Phase 6/7 evaluation gate"] == "queris-ci-eval"
+    assert "docker compose up --build --detach --wait" in commands["Start containerized API"]
+    assert commands["Stop containerized API"] == "docker compose down"
+    stop_step = next(step for step in steps if step["name"] == "Stop containerized API")
+    assert stop_step["if"] == "always()"
