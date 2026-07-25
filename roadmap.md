@@ -6,11 +6,11 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 ## Current focus
 
-- **Active stage:** Phase 8 — Demo UX (`[~]`)
-- **Latest checkpoint:** added retry count, total latency, and terminal blocked status to current results and session history.
-- **Completed work:** completed Phase 7 and all three Phase 8 implementation items: Streamlit results, auditable query/source history, and transparent execution metrics.
-- **Pending next:** verify the Phase 8 exit criterion with five representative live demo questions.
-- **Resume point:** define and run the five-question live demo exit check before marking Phase 8 complete.
+- **Active stage:** Phase 8 — Demo UX (`[x]`; review gate)
+- **Latest checkpoint:** passed the versioned five-question live demo exit evaluation 5/5 with `gemini-3.5-flash` and no retries (2026-07-25).
+- **Completed work:** completed Phase 7 plus the full Phase 8 Streamlit flow, session audit history, transparent metrics, and strict live result-and-explanation validation.
+- **Pending next:** review and merge the Phase 8 completion pull request before starting Phase 9.
+- **Resume point:** after the completion PR is merged, invoke `$queris-start-next-phase` to begin Phase 9 from updated `main`.
 - **Last updated:** 2026-07-25
 
 ---
@@ -142,6 +142,9 @@ This is the source of truth for pending decisions, delivery order, and progress.
 - [x] Surface retry count / latency / blocked status in the UI for transparency during demos
 
 **Exit criteria:** a non-technical person can ask 5 example questions live and get correct, explained results.
+
+Verified 2026-07-25: `gemini-3.5-flash` passed all 5 versioned live demo questions with correct
+results, non-empty explanations, and zero retries.
 
 ---
 
