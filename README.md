@@ -2,7 +2,7 @@
 
 ## Current status
 
-🚧 **Phase 9 productionization is in progress.** Queris exposes its validated read-only agent loop through a typed FastAPI service, includes a non-root Docker Compose deployment, and runs repository checks plus a credential-independent Phase 6/7 regression gate on every pull request to `main`. The completed Phase 8 Streamlit flow remains available, and its versioned five-question live demo evaluation passed 5/5 with `gemini-3.5-flash`. Structured request logging is the remaining Phase 9 implementation checkpoint. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
+✅ **Phase 9 productionization is complete and awaiting review.** Queris exposes its validated read-only agent loop through a typed FastAPI service, includes a non-root Docker Compose deployment, and runs repository checks, a credential-independent Phase 6/7 regression gate, and a container smoke test on every pull request to `main`. API requests produce privacy-preserving JSON completion logs with a request ID, latency, retry count, and blocked/allowed decision. The completed Phase 8 Streamlit flow remains available, and its versioned five-question live demo evaluation passed 5/5 with `gemini-3.5-flash`. See the [`roadmap.md`](roadmap.md#current-focus) for the exact resume point.
 
 ## Product vision
 
@@ -138,6 +138,10 @@ queris-api
 `{"question": "How many orders are there?"}` and returns the safe agent's typed terminal result,
 including SQL, rows, sources, retries, latency, and blocked status. Set `QUERIS_DATABASE`,
 `QUERIS_HOST`, or `QUERIS_PORT` to override their local defaults.
+
+Every response includes an `X-Request-ID`. The service emits one JSON completion log containing that
+identifier, HTTP and agent latency, retry count, and query decision. Questions, generated SQL,
+result rows, database paths, and credentials are deliberately excluded.
 
 To run the same API in a container, create the fixture on the host and start Compose:
 

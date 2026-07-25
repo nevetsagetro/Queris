@@ -65,8 +65,11 @@ Version and review schema-enrichment metadata before indexing. Test stale refere
 ## Commit & Pull Request Guidelines
 
 Follow `CONTRIBUTING.md`: branch from updated `main`, use typed kebab-case names, and write Conventional Commit subjects such as `feat(sql): reject stacked statements`. Keep commits focused. Pull requests explain the problem, implementation, verification, and security-impacting changes.
-The `Quality` GitHub Actions workflow runs repository hooks and the full pytest suite on pull requests to `main`.
+The `Quality` GitHub Actions workflow runs repository hooks, the full pytest suite, deterministic
+evaluation gates, and a Docker Compose API smoke test on pull requests to `main`.
 
 ## Security & Configuration
 
 Treat the security boundaries in `README.md` as acceptance criteria from the first implementation. Never commit secrets or generated database files. Architectural changes require an ADR and a corresponding roadmap update.
+Structured API logs must not include questions, generated SQL, result rows, database paths, or
+credentials.
