@@ -6,8 +6,8 @@ Queris turns natural-language business questions into validated, read-only SQL o
 more than an LLM wrapper: schema retrieval, bounded self-correction, adversarial testing, transparent
 execution metrics, and automated regression gates are part of the product.
 
-The portfolio scope is complete through productionization. The optional stretch phase is
-intentionally out of scope.
+The original portfolio scope is complete through productionization. The roadmap now defines a
+second tier of reasoning and generalization work beyond that accepted baseline.
 
 ## Why this project stands out
 
@@ -19,7 +19,7 @@ intentionally out of scope.
   generation and retries at most three times.
 - **The result is explainable.** The demo shows SQL, rows, charts, explanations, schema sources,
   retries, latency, and blocked status.
-- **It looks deployable.** FastAPI, Pydantic contracts, Docker Compose, structured JSON logs, and
+- **It is packaged for deployment.** FastAPI, Pydantic contracts, Docker Compose, structured JSON logs, and
   GitHub Actions are included.
 
 ## Verified results
@@ -33,9 +33,17 @@ intentionally out of scope.
 | Enriched wide-schema retrieval | 1.00 recall@5 | Reviewed metadata recovers every labeled relevant column |
 | Automated Python suite | 280 tests | Unit, integration, safety, evaluation, API, CI, and container configuration coverage |
 
+The evaluation questions, expected SQL, and reviewed results were created together during
+development and were not independently reviewed against a hidden answer key. These numbers verify
+the versioned regression contract, not generalization to unseen schemas; Phase 14 adds a cold
+held-out evaluation and publishes the performance delta.
+
 The CI gate is credential-independent: it creates disposable fixtures, uses reviewed reference SQL
 for result regression, runs adversarial cases through the real validation paths, and fails if a case
 set is reduced or any required rate falls below 100%.
+
+See [concrete evaluation transcripts](docs/examples.md) for a blocked prompt-injection attempt, a
+self-corrected execution failure, and a typed no-answer response.
 
 ## Architecture
 
@@ -54,6 +62,18 @@ flowchart LR
 ```
 
 The runtime never exposes a general-purpose database or system-command tool to the model.
+Generation currently uses a single prompt pass with retrieved schema context. The roadmap adds
+semantic critique, bounded schema-discovery tools, confidence estimation, and multi-step planning
+without weakening the existing validation boundary.
+
+### Design trade-offs at scale
+
+The current local architecture favors auditable behavior over warehouse-scale throughput. At 100+
+tables, retrieval would need measured recall across domains and likely hierarchical or
+catalog-assisted routing rather than a single top-k search. Concurrent production traffic would
+also require pooled, workload-limited database connections instead of opening a local DuckDB file
+per request. Schema embeddings would need an explicit refresh and invalidation policy as tables,
+columns, and reviewed metadata drift.
 
 ## Try the demo
 
@@ -128,6 +148,19 @@ Queris treats model output and database content as untrusted:
 6. Retry count is bounded, and blocked or exhausted attempts return typed terminal results.
 7. Query sources and operational metrics remain auditable without leaking sensitive content into
    service logs.
+
+## Limitations and known risks
+
+The evaluation questions and reviewed expectations were authored by the same person who built the
+system; there is no independently authored held-out set yet. Phase 14 is planned to measure cold
+generalization on a structurally different schema and publish the result.
+
+SQLGlot validation covers the documented bypass classes, including comments, casing, nesting, and
+stacked statements, but it has not been tested against an exhaustive or automated adversarial
+search. The retail and wide-schema datasets are synthetic, so behavior against a messy production
+warehouse schema remains untested. Confidence is also implicit today: the agent returns a result or
+a typed clarification, no-answer, or blocked/failure response, but no calibrated score. Phase 11
+plans agreement-based confidence and a distinct low-confidence path.
 
 ## Evaluation commands
 
