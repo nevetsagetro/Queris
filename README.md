@@ -173,6 +173,10 @@ queris-sample-data data/retail.duckdb
 queris-wide-data data/wide.duckdb
 queris-evaluation-report data/retail.duckdb
 
+# Reproduce the enriched wide-schema retrieval result with the fixture created above
+queris-retrieval-eval data/wide.duckdb metadata/wide-schema.v1.yaml \
+  evals/wide_schema_retrieval.json --top-k 5
+
 # Strict five-question live demo evaluation
 queris-demo-eval data/retail.duckdb
 ```

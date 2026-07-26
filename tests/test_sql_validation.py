@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 from sqlglot import exp
 
@@ -37,3 +39,17 @@ def test_parse_read_only_rejects_multiple_statements() -> None:
 def test_parse_read_only_hides_parser_details() -> None:
     with pytest.raises(SQLValidationError, match="could not be parsed"):
         parse_read_only("SELECT FROM")
+
+
+@pytest.mark.parametrize("sql", ["LOAD httpfs", "CALL checkpoint()"])
+def test_parse_read_only_rejects_commands_without_parser_warning(
+    sql: str,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with (
+        caplog.at_level(logging.WARNING, logger="sqlglot"),
+        pytest.raises(SQLValidationError, match="Only SELECT and WITH"),
+    ):
+        parse_read_only(sql)
+
+    assert not caplog.records
