@@ -34,6 +34,9 @@ export type Catalog = {
 export type DatasetInfo = {
   id: string;
   name: string;
+  source_name: string | null;
+  source_url: string | null;
+  license: string | null;
   size_bytes: number;
   modified_at: string;
   active: boolean;

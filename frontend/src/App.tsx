@@ -27,6 +27,7 @@ function App() {
   const [history, setHistory] = useState<QueryResult[]>(() => readHistory());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const activeDataset = datasets.find((dataset) => dataset.active) ?? null;
 
   useEffect(() => {
     void loadDiscovery()
@@ -118,7 +119,7 @@ function App() {
             </button>
           ))}
         </nav>
-        <label className="dataset-picker"><span className="status-dot" /><span className="sr-only">Active dataset</span><select value={datasets.find((dataset) => dataset.active)?.id ?? ""} onChange={(event) => void changeDataset(event.target.value)} disabled={!datasets.length}><option value="">No dataset</option>{datasets.map((dataset) => <option value={dataset.id} key={dataset.id}>{dataset.name}</option>)}</select></label>
+        <div className="dataset-picker"><label><span className="status-dot" /><span className="sr-only">Active dataset</span><select value={activeDataset?.id ?? ""} onChange={(event) => void changeDataset(event.target.value)} disabled={!datasets.length}><option value="">No dataset</option>{datasets.map((dataset) => <option value={dataset.id} key={dataset.id}>{dataset.name}</option>)}</select></label>{activeDataset?.source_url && <a href={activeDataset.source_url} target="_blank" rel="noreferrer">Verify source ↗</a>}</div>
       </header>
 
       <main className="main-content">
