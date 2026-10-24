@@ -157,6 +157,7 @@ function App() {
         {view === "catalog" && <CatalogView catalog={catalog} profile={profile} enrichment={enrichment} dataset={activeDataset} onUseExample={useExample} examples={examples} />}
         {view === "history" && <HistoryView history={history} demoHistory={demoHistory} recommendations={recommendations} metrics={metrics} onSelect={setResult} onRunExample={runExample} />}
       </main>
+      <footer className="site-footer">Built with <span aria-label="love">💕</span> by Nevets Agetro.</footer>
     </div>
   );
 }
