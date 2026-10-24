@@ -20,6 +20,10 @@ catalog → useful questions → validated SQL → result, chart, and explanatio
 The experience is built with **React + Vite**, backed by **FastAPI**, with a **LangGraph** execution
 flow and read-only database adapters.
 
+<p align="center">
+  <img src="docs/assets/queris-overview.png" alt="Queris React frontend showing the catalog context, execution flow, result table, formatted SQL, and data sources" width="1100" />
+</p>
+
 ## See the product in five minutes
 
 ### 1. Install and download a real public database
