@@ -161,7 +161,7 @@ changes produce an auditable impact report.
 **Goal:** support current remote data only after local snapshot behavior is stable.
 
 - [x] Define a common adapter protocol for introspection, health checks, validation, and read-only execution.
-- [~] Implement PostgreSQL with a dedicated read-only role and timeout; pooling, API wiring, and integration tests remain.
+- [~] Implement PostgreSQL with a dedicated read-only role, timeout, and optional bounded pool; API wiring and integration tests remain.
 - [ ] Add explicit live/snapshot mode to the frontend and API.
 - [ ] Keep credentials in a secret manager or environment boundary, never in manifests sent to the LLM.
 - [ ] Add connector-specific SQL dialect validation and integration tests.

@@ -64,3 +64,28 @@ def test_postgres_adapter_rejects_mutation_before_connecting() -> None:
         adapter.execute("DELETE FROM orders")
 
     assert calls == []
+
+
+def test_postgres_adapter_can_use_an_injected_pool() -> None:
+    connection = FakeConnection()
+
+    class FakePool:
+        def connection(self):
+            return self
+
+        def __enter__(self):
+            return connection
+
+        def __exit__(self, *_args: object) -> None:
+            pass
+
+        def close(self) -> None:
+            pass
+
+    adapter = PostgresAdapter(
+        "postgresql://redacted",
+        pool_factory=lambda _dsn: FakePool(),
+    )
+
+    assert adapter.execute("SELECT 1").rows == ((1,),)
+    assert len(connection.cursors) == 2

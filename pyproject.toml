@@ -52,7 +52,7 @@ dev = [
   "pytest>=8.0",
   "ruff==0.15.18",
 ]
-postgres = ["psycopg[binary]>=3.2"]
+postgres = ["psycopg[binary]>=3.2", "psycopg-pool>=3.2"]
 
 [tool.pytest.ini_options]
 addopts = "-ra --strict-config --strict-markers"

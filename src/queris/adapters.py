@@ -1,7 +1,7 @@
 """Database adapter boundary shared by local snapshots and optional live engines."""
 
 from collections.abc import Callable
-from contextlib import closing
+from contextlib import closing, contextmanager
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -43,6 +43,14 @@ class DatabaseAdapter(Protocol):
     def execute(self, sql: str) -> AdapterResult: ...
 
 
+class ConnectionPool(Protocol):
+    """Small pool boundary so production pooling remains optional."""
+
+    def connection(self) -> Any: ...
+
+    def close(self) -> None: ...
+
+
 @dataclass(frozen=True)
 class DuckDBAdapter:
     """Read-only adapter for a local DuckDB snapshot."""
@@ -76,19 +84,25 @@ class PostgresAdapter:
         dsn: str,
         *,
         connect_factory: Callable[[str], Any] | None = None,
+        pool_factory: Callable[[str], ConnectionPool] | None = None,
         statement_timeout_ms: int = 30_000,
+        pool_size: int = 4,
     ):
         if not dsn.strip():
             raise ValueError("dsn must be non-empty")
         if statement_timeout_ms <= 0:
             raise ValueError("statement_timeout_ms must be positive")
+        if pool_size <= 0:
+            raise ValueError("pool_size must be positive")
         self._dsn = dsn
         self._connect_factory = connect_factory or _postgres_connect
+        self._pool = pool_factory(dsn) if pool_factory is not None else None
         self._statement_timeout_ms = statement_timeout_ms
+        self._pool_size = pool_size
 
     def healthcheck(self) -> AdapterHealth:
         try:
-            with closing(self._connect()) as connection, closing(connection.cursor()) as cursor:
+            with self._connection() as connection, closing(connection.cursor()) as cursor:
                 cursor.execute("SELECT 1")
             return AdapterHealth(engine=self.engine, available=True)
         except Exception as error:
@@ -104,7 +118,7 @@ class PostgresAdapter:
         WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
         ORDER BY table_schema, table_name, ordinal_position
         """
-        with closing(self._connect()) as connection:
+        with self._connection() as connection:
             self._prepare_session(connection)
             with closing(connection.cursor()) as cursor:
                 cursor.execute(query)
@@ -113,7 +127,7 @@ class PostgresAdapter:
 
     def execute(self, sql: str) -> AdapterResult:
         parse_read_only(sql)
-        with closing(self._connect()) as connection:
+        with self._connection() as connection:
             self._prepare_session(connection)
             with closing(connection.cursor()) as cursor:
                 cursor.execute(sql)
@@ -121,6 +135,15 @@ class PostgresAdapter:
 
     def _connect(self) -> Any:
         return self._connect_factory(self._dsn)
+
+    @contextmanager
+    def _connection(self):
+        if self._pool is not None:
+            with self._pool.connection() as connection:
+                yield connection
+            return
+        with closing(self._connect()) as connection:
+            yield connection
 
     def _prepare_session(self, connection: Any) -> None:
         with closing(connection.cursor()) as cursor:
@@ -134,6 +157,21 @@ def _postgres_connect(dsn: str) -> Any:
     except ImportError as error:
         raise RuntimeError("install the postgres extra to use PostgresAdapter") from error
     return psycopg.connect(dsn, autocommit=True)
+
+
+def postgres_pool(dsn: str, *, pool_size: int = 4) -> ConnectionPool:
+    """Create an optional psycopg pool with bounded local concurrency."""
+    try:
+        from psycopg_pool import ConnectionPool
+    except ImportError as error:
+        raise RuntimeError("install the postgres extra to use PostgreSQL pooling") from error
+    return ConnectionPool(
+        conninfo=dsn,
+        min_size=1,
+        max_size=pool_size,
+        kwargs={"autocommit": True},
+        open=True,
+    )
 
 
 def _execute_cursor(cursor: Any) -> AdapterResult:
