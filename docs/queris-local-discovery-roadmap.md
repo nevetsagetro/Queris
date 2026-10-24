@@ -129,9 +129,9 @@ is required to display or rerun an already validated starter.
 
 **Goal:** make Queris useful daily for technical and non-technical users.
 
-- [ ] Add a workspace selector for registered local snapshots.
-- [ ] Display source provenance, snapshot age, schema status, and enrichment status.
-- [ ] Keep demo history and real history visibly separate.
+- [x] Add a workspace selector for registered local snapshots through the API dataset selector.
+- [x] Display source provenance, snapshot age, schema status, and enrichment status.
+- [x] Keep demo history and real history visibly separate.
 - [x] Persist query results and SQL replay cache outside business tables.
 - [x] Show execution flow: catalog, generation, validation, read-only execution, and cache.
 - [x] Present SQL with line numbers, copy/download actions, source tables, and read-only status.
@@ -145,7 +145,7 @@ SQL and sources, and reproduce the result locally without repeating LLM work.
 
 **Goal:** keep local intelligence current without regenerating everything.
 
-- [~] Add explicit snapshot refresh with checksum comparison.
+- [x] Add explicit snapshot refresh with checksum comparison.
 - [x] Compare schema identifiers and types before deciding whether intelligence is stale.
 - [x] Mark only affected intelligence and cache entries stale when schema changes, preserving the old artifact.
 - [x] Reuse approved enrichment when references remain valid through live-schema validation.
@@ -161,7 +161,7 @@ changes produce an auditable impact report.
 **Goal:** support current remote data only after local snapshot behavior is stable.
 
 - [x] Define a common adapter protocol for introspection, health checks, validation, and read-only execution.
-- [~] Implement PostgreSQL with a dedicated read-only role and timeout; pooling and integration tests remain.
+- [~] Implement PostgreSQL with a dedicated read-only role and timeout; pooling, API wiring, and integration tests remain.
 - [ ] Add explicit live/snapshot mode to the frontend and API.
 - [ ] Keep credentials in a secret manager or environment boundary, never in manifests sent to the LLM.
 - [ ] Add connector-specific SQL dialect validation and integration tests.
