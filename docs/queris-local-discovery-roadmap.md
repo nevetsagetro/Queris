@@ -145,7 +145,8 @@ SQL and sources, and reproduce the result locally without repeating LLM work.
 
 **Goal:** keep local intelligence current without regenerating everything.
 
-- [ ] Add explicit snapshot refresh with checksum comparison.
+- [~] Add explicit snapshot refresh with checksum comparison.
+- [x] Compare schema identifiers and types before deciding whether intelligence is stale.
 - [ ] Invalidate only catalog, queries, and cache entries affected by schema changes.
 - [ ] Reuse approved enrichment when references remain valid.
 - [ ] Regenerate only impacted starters and charts.
