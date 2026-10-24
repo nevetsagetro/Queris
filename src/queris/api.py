@@ -327,7 +327,13 @@ def create_app(
 
     @application.get("/examples", response_model=tuple[DemoExample, ...])
     async def examples() -> tuple[DemoExample, ...]:
-        return get_demo_examples()
+        if not active_database.is_file():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Configured database is unavailable",
+            )
+        schema, _ = active_schema_and_enrichment()
+        return _dataset_examples(schema)
 
     @application.get("/catalog/profile", response_model=CatalogProfile)
     async def catalog_profile() -> CatalogProfile:
@@ -344,7 +350,13 @@ def create_app(
 
     @application.get("/history/demo", response_model=tuple[DemoHistoryItem, ...])
     async def demo_history() -> tuple[DemoHistoryItem, ...]:
-        return get_demo_history()
+        if not active_database.is_file():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Configured database is unavailable",
+            )
+        schema, _ = active_schema_and_enrichment()
+        return _dataset_demo_history(schema)
 
     @application.post("/query", response_model=QueryResponse)
     async def query(request: QueryRequest, http_request: Request) -> QueryResponse:
@@ -443,6 +455,50 @@ def _generic_recommendation(demo_id: str | None) -> str | None:
 def _questions_match(left: str, right: str) -> bool:
     """Accept harmless whitespace/case changes, but reject stale demo contexts."""
     return " ".join(left.casefold().split()) == " ".join(right.casefold().split())
+
+
+def _dataset_examples(schema: DatabaseSchema) -> tuple[DemoExample, ...]:
+    """Return starters that belong to the active schema, not a previous dataset."""
+    if _is_retail_schema(schema):
+        return get_demo_examples()
+    return tuple(
+        DemoExample(
+            id=run.demo_id,
+            title=run.question,
+            question=run.question,
+            category="discovery",
+            tables=run.tables,
+            chart=run.chart,
+        )
+        for run in recommend_runs(schema)
+    )
+
+
+def _dataset_demo_history(schema: DatabaseSchema) -> tuple[DemoHistoryItem, ...]:
+    """Expose a demo-history layer for every schema, including generated starters."""
+    if _is_retail_schema(schema):
+        return get_demo_history()
+    return tuple(
+        DemoHistoryItem(
+            id=f"history-{run.demo_id}",
+            source="demo",
+            created_at="2026-01-01T00:00:00Z",
+            user="Queris catalog",
+            question=run.question,
+            status="ready_to_run",
+            tables=run.tables,
+            chart=run.chart,
+            explanation="Deterministic starter generated from the active dataset catalog.",
+            result_summary=run.reason,
+        )
+        for run in recommend_runs(schema)
+    )
+
+
+def _is_retail_schema(schema: DatabaseSchema) -> bool:
+    """Identify the normalized retail shape that owns the curated 100-question history."""
+    table_names = {table.name for table in schema.tables}
+    return {"orders", "order_items"}.issubset(table_names)
 
 
 app = create_app()

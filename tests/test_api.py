@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 from uuid import UUID
 
+import duckdb
 import httpx
 import pytest
 
@@ -96,6 +97,28 @@ async def test_catalog_and_examples_are_discoverable(sample_database: Path) -> N
     assert len(demo_history.json()) == 100
     assert demo_history.json()[0]["status"] == "ready_to_run"
     assert demo_history.json()[0]["source"] == "demo"
+
+
+@pytest.mark.anyio
+async def test_non_retail_dataset_gets_schema_specific_starters(tmp_path: Path) -> None:
+    database = tmp_path / "penguins.duckdb"
+    connection = duckdb.connect(str(database))
+    connection.execute("CREATE TABLE penguins (species VARCHAR, body_mass_g INTEGER)")
+    connection.execute("INSERT INTO penguins VALUES ('Adelie', 3700), ('Gentoo', 5000)")
+    connection.close()
+
+    async with api_client(create_app(database_path=database)) as client:
+        examples = await client.get("/examples")
+        demo_history = await client.get("/history/demo")
+        catalog = await client.get("/catalog")
+        recommendations = await client.get("/recommendations")
+
+    assert examples.status_code == 200
+    assert examples.json()[0]["question"] == "How many rows are in penguins?"
+    assert demo_history.status_code == 200
+    assert demo_history.json()[0]["id"] == "history-table-count:penguins"
+    assert catalog.json()["table_count"] == 1
+    assert recommendations.json()[0]["demo_id"] == "table-count:penguins"
 
 
 @pytest.mark.anyio
