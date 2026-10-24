@@ -1,5 +1,5 @@
 from queris.agent_loop import AgentQueryResult
-from queris.demo_presenter import present_success
+from queris.demo_presenter import build_execution_flow, present_success
 
 
 def test_present_success_builds_table_chart_and_explanation() -> None:
@@ -24,6 +24,14 @@ def test_present_success_builds_table_chart_and_explanation() -> None:
     assert presentation.explanation == (
         "The query returned 2 rows across these fields: category, revenue."
     )
+    assert tuple(step.status for step in presentation.execution_flow) == (
+        "complete",
+        "complete",
+        "complete",
+        "complete",
+        "complete",
+        "complete",
+    )
 
 
 def test_present_success_explains_one_scalar_result() -> None:
@@ -42,6 +50,26 @@ def test_present_success_explains_one_scalar_result() -> None:
     assert presentation.chart is not None
     assert presentation.chart.x == "_row"
     assert presentation.explanation == "The result is 12 for order_count."
+
+
+def test_build_execution_flow_marks_validation_failure_as_blocked() -> None:
+    result = AgentQueryResult(
+        status="failure",
+        question="Delete every order",
+        sql="DELETE FROM orders",
+        failure_stage="validation",
+        error="Forbidden SQL operation: DELETE",
+        retry_count=3,
+        retries_exhausted=True,
+        explanation="Could not produce executable read-only SQL after 4 attempts.",
+    )
+
+    flow = build_execution_flow(result)
+
+    assert flow[2].detail == "initial attempt + 3 corrections."
+    assert flow[3].status == "blocked"
+    assert flow[4].detail == "Rejected before database execution."
+    assert flow[5].status == "skipped"
 
 
 def test_present_success_omits_chart_for_empty_results() -> None:

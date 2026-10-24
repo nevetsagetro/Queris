@@ -1,0 +1,69 @@
+version: 1
+reviewed: true
+tables:
+  - schema_name: main
+    name: Artist
+    description: Music artists represented in the Chinook catalogue.
+    business_terms: [artist, music artist]
+    columns:
+      - name: Name
+        description: Artist display name.
+        business_terms: [artist name]
+  - schema_name: main
+    name: Album
+    description: Albums released by artists in the music catalogue.
+    business_terms: [album, release]
+    columns:
+      - name: Title
+        description: Album title.
+        business_terms: [album name]
+      - name: ArtistId
+        description: Identifier of the artist who released the album.
+        aliases: [artist id]
+  - schema_name: main
+    name: Track
+    description: Individual music tracks with duration, media type, and genre references.
+    business_terms: [track, song]
+    aliases: [music track]
+    columns:
+      - name: Name
+        description: Track title.
+        business_terms: [song name]
+      - name: Milliseconds
+        description: Track duration in milliseconds.
+        business_terms: [duration]
+        unit: ms
+      - name: GenreId
+        description: Identifier of the track genre.
+        aliases: [genre id]
+  - schema_name: main
+    name: Genre
+    description: Music genres assigned to tracks.
+    business_terms: [genre, music category]
+    columns:
+      - name: Name
+        description: Genre display name.
+        business_terms: [genre name]
+  - schema_name: main
+    name: Customer
+    description: Customers who purchase music from the Chinook store.
+    business_terms: [customer, buyer]
+    columns:
+      - name: Country
+        description: Customer billing country.
+        business_terms: [country, market]
+      - name: CustomerId
+        description: Unique customer identifier.
+        aliases: [customer id]
+  - schema_name: main
+    name: Invoice
+    description: Customer invoices containing billing totals and billing geography.
+    business_terms: [invoice, purchase]
+    columns:
+      - name: InvoiceDate
+        description: Date and time when the invoice was issued.
+        unit: timestamp
+      - name: Total
+        description: Total invoice amount in the source currency.
+        business_terms: [revenue, invoice total]
+        unit: currency

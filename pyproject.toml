@@ -31,8 +31,17 @@ queris-eval = "queris.evaluation:main"
 queris-ci-eval = "queris.ci_evaluation:main"
 queris-evaluation-report = "queris.evaluation_report:main"
 queris-enrichment-draft = "queris.enrichment_draft:main"
+queris-enrichment = "queris.semantic_discovery:main"
 queris-retrieval-eval = "queris.retrieval_evaluation:main"
 queris-sample-data = "queris.sample_data:main"
+queris-online-retail = "queris.online_retail:main"
+queris-dataset = "queris.additional_datasets:main"
+queris-dataset-workflow = "queris.dataset_workflow:main"
+queris-snapshot = "queris.snapshot:main"
+queris-discover = "queris.workspace_discovery:main"
+queris-intelligence = "queris.query_intelligence:main"
+queris-refresh = "queris.schema_drift:main"
+queris-export = "queris.workspace_export:main"
 queris-schema = "queris.schema:main"
 queris-demo = "queris.demo:main"
 queris-wide-data = "queris.wide_schema:main"
@@ -43,6 +52,7 @@ dev = [
   "pytest>=8.0",
   "ruff==0.15.18",
 ]
+postgres = ["psycopg[binary]>=3.2", "psycopg-pool>=3.2"]
 
 [tool.pytest.ini_options]
 addopts = "-ra --strict-config --strict-markers"

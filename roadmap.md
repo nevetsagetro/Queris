@@ -6,12 +6,18 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 ## Current focus
 
-- **Active stage:** Phase 9 — Productionization (`[x]`; review gate)
-- **Latest checkpoint:** added privacy-preserving structured request logs and a CI Compose smoke test for the containerized API (2026-07-25).
-- **Completed work:** completed every Phase 9 implementation item: typed FastAPI, Docker Compose, PR quality checks, deterministic evaluation gates, and structured logging.
-- **Pending next:** review and merge the Phase 9 completion pull request after its quality, evaluation, and Compose smoke checks pass.
-- **Resume point:** after the completion PR is merged, invoke `$queris-start-next-phase` from updated `main` to assess the optional Phase 10 stretch goals.
-- **Last updated:** 2026-07-25
+- **Active stage:** Product workflow, multi-dataset discovery, and agentic generalization (`[~]`)
+- **Product direction:** local, safe database discovery and natural-language SQL over reproducible
+  snapshots; see [`docs/queris-local-discovery-roadmap.md`](docs/queris-local-discovery-roadmap.md).
+- **Latest checkpoint:** modular React/API workspace plus a repeatable read-only dataset registration
+  workflow with provenance manifests, enrichment drafts, catalog relationships, and 50 validated
+  starters per dataset (2026-10-24).
+- **Completed work:** completed and merged Phases 0–9, including the safe agent, evaluation harness, demo, API, container, CI gates, structured logging, and multi-dataset registration workflow.
+- **Pending next:** start the local discovery product track with the workspace manifest and Parquet/CSV
+  snapshot importers described in Wave 0 and Wave 1.
+- **Resume point:** implement the first snapshot importer, then run the complete discovery and query
+  intelligence workflow against one unknown schema.
+- **Last updated:** 2026-10-24
 
 ---
 
@@ -161,15 +167,92 @@ results, non-empty explanations, and zero retries.
 
 ---
 
-## Phase 10 — Stretch Goals (optional, post-portfolio-ready)
-- [ ] React/TypeScript frontend replacing/complementing Streamlit
-- [ ] Multi-dataset support (schema switch at runtime)
+## Phase 10 — Semantic Self-Verification
+**Goal:** catch queries that execute successfully but do not answer the question's intent.
+
+- [ ] Add a post-generation, pre-execution critique step that checks whether SQL matches the question
+- [ ] Add post-execution sanity checks for empty results, suspicious cardinality, and type mismatches relative to the question
+- [ ] Extend the eval harness with a semantically-wrong-but-syntactically-valid adversarial category
+- [ ] Log critique disagreements as an observability signal distinct from retries
+
+**Exit criteria:** a documented set of silently wrong queries from Phase 6/7 history are caught before or after execution.
+
+---
+
+## Phase 11 — Confidence & Ensemble Generation
+**Goal:** move from single-shot generation with retry to sampled generation with a measurable confidence signal.
+
+- [ ] Generate a bounded number of candidate SQL statements per question at controlled temperature variation
+- [ ] Run every candidate through the existing read-only validation path and compare executed results for agreement
+- [ ] Surface an agreement-based confidence score in the API and demo
+- [ ] Add a low-confidence clarification path distinct from existing unanswerable and blocked paths
+
+**Exit criteria:** the confidence score correlates measurably with Phase 6 result accuracy on held-out questions.
+
+---
+
+## Phase 11.5 — Interactive Schema Discovery
+**Goal:** let the agent explore schema during bounded reasoning instead of relying only on static upfront retrieval.
+
+- [ ] Add `list_tables`, `describe_table`, and `sample_rows` as LangGraph tool nodes routed through the existing SQLGlot validator and read-only DuckDB connection
+- [ ] Add a decision point for whether retrieved schema is sufficient or further exploration is needed
+- [ ] Cap discovery calls per query, mirroring the bounded-retry pattern from Phase 5
+- [ ] Log discovery call count, tools used, and added latency per query
+- [ ] Add eval cases where upfront retrieval is deliberately insufficient and discovery is required
+
+**Exit criteria:** a documented set of retrieval-only failures succeeds through bounded, fully auditable discovery calls.
+
+---
+
+## Phase 12 — Planning for Multi-Step Questions
+**Goal:** answer compositional questions through visible, safe sub-queries.
+
+- [ ] Decompose a complex question into ordered sub-questions
+- [ ] Execute sub-queries independently through the existing safety pipeline
+- [ ] Compose sub-results into a typed final response with per-step provenance
+- [ ] Add a decomposition-required eval category with expected sub-query breakdowns
+
+**Exit criteria:** a defined multi-step set succeeds with auditable sub-query provenance in the demo.
+
+---
+
+## Phase 13 — Session Memory & Follow-Up Questions
+**Goal:** support conversational follow-ups without rebuilding full context on every turn.
+
+- [ ] Persist prior SQL, schema sources, and result shape per session
+- [ ] Resolve follow-up questions against session state before falling back to fresh retrieval
+- [ ] Handle follow-ups that conflict ambiguously with prior context
+- [ ] Extend the adversarial suite with prompt injection attempted through follow-up chaining
+
+**Exit criteria:** a scripted three-turn conversational eval passes with correct context resolution and no safety regression.
+
+---
+
+## Phase 14 — Held-Out Generalization Testing
+**Goal:** measure cold generalization and directly address the current self-authored evaluation limitation.
+
+- [ ] Introduce a new, structurally different synthetic schema that prompts and existing eval questions were never tuned against
+- [ ] Freeze its questions and expected results before running the system or adjusting retrieval
+- [ ] Measure accuracy, retrieval, and safety metrics without prompt or retrieval adjustment for this schema
+- [ ] Publish the delta between tuned and held-out performance in the README results table
+
+**Exit criteria:** held-out performance appears in the README beside existing verified results, including failures and the tuned-to-held-out delta.
+
+---
+
+## Phase 15 — Deferred Stretch Goals
+**Status:** optional and outside both the accepted portfolio baseline and the Phase 10–14 reasoning track.
+
+- [~] React/TypeScript frontend replacing/complementing Streamlit (modular demo registry, API
+  discovery, catalog profile, recommendations, charts, and browser components implemented;
+  production handoff remains)
+- [~] Multi-dataset support (local schema switch, provenance manifests, enrichment workflow, catalog
+  profiling, and 50 validated starters implemented; held-out evaluation remains)
 - [ ] Voice question input through Whisper-compatible speech-to-text, feeding the transcript into the existing validated natural-language query pipeline
 - [ ] Pluggable database-engine adapters, starting with PostgreSQL and preserving dialect-aware SQL validation plus read-only execution boundaries
 - [ ] Evaluate other widely used engines such as MySQL, BigQuery, or Snowflake based on deployment demand and measured compatibility
 - [ ] Side-by-side comparison of multiple LLMs on the same eval set (accuracy vs cost vs latency)
 - [ ] Cost/latency dashboard over historical eval runs
-- [ ] Natural-language follow-up questions (conversational context across queries)
 
 ---
 
@@ -182,7 +265,20 @@ Phase 0 → 1 (safe core) → 2 (baseline) → 3 (hardening) → 4 (enrichment +
                                               ↓
                                     8 (demo UX) → 9 (production)
                                               ↓
-                                      10 (stretch, optional)
+                          10 (self-verification) → 11 (confidence/ensemble)
+                                              ↓
+                              11.5 (schema discovery) → 12 (planning)
+                                              ↓
+                                    13 (session memory)
+                                              ↓
+                              14 (held-out generalization)
 ```
 
-Phases 6 and 7 should be treated as a pair and kept growing throughout — every new capability (Phase 4, 5, 8...) should add corresponding cases to the eval set rather than being considered "done" in isolation.
+Phases 6 and 7 should be treated as a pair and kept growing throughout. Every capability from Phase
+10 onward must add corresponding evaluation and adversarial cases rather than being considered done
+in isolation.
+
+Implementation priority is evidence-first: complete this documentation revision, then Phase 14,
+Phase 10, Phase 11.5, and finally Phases 11, 12, and 13. The numbered dependency sequence still
+places discovery before planning; prioritizing Phase 14 does not make later capabilities part of its
+cold held-out measurement.
