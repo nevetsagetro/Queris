@@ -6,8 +6,9 @@ import re
 from pathlib import Path
 from typing import Protocol
 
-from google import genai
 import yaml
+from google import genai
+
 from queris.catalog_profile import CatalogProfile, profile_database
 from queris.database import read_only_connection
 from queris.enrichment_draft import dump_schema_enrichment
