@@ -103,7 +103,7 @@ the business database.
 - [ ] Generate ambiguity notes and candidate join explanations.
 - [x] Generate a versioned enrichment draft with source evidence references.
 - [x] Require human approval before activating semantic metadata.
-- [ ] Reject stale references and preserve the previous approved catalog on failure.
+- [x] Reject stale references and preserve the previous approved catalog on failure.
 - [x] Cache enrichment by the bounded discovery prompt hash, which changes with the schema context.
 
 **Exit criteria:** a new snapshot can produce a useful reviewable catalog without exposing credentials,
@@ -120,7 +120,7 @@ unbounded rows, or arbitrary database tools to the LLM.
 - [x] Execute every generated query through the read-only validator.
 - [x] Store pass/fail results and never publish failed starters as ready-to-run.
 - [x] Add chart suitability confidence to each validated result.
-- [~] Persist validated query intelligence by schema fingerprint.
+- [x] Persist validated query intelligence by schema fingerprint.
 
 **Exit criteria:** the frontend opens with a useful, dataset-specific discovery history and no LLM call
 is required to display or rerun an already validated starter.

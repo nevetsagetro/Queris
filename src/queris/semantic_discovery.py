@@ -14,7 +14,7 @@ from queris.catalog_profile import CatalogProfile, profile_database
 from queris.database import read_only_connection
 from queris.enrichment_draft import dump_schema_enrichment
 from queris.schema import DatabaseSchema, introspect_schema
-from queris.schema_enrichment import SchemaEnrichment
+from queris.schema_enrichment import SchemaEnrichment, validate_schema_enrichment
 
 DEFAULT_ENRICHMENT_MODEL = "gemini-3.5-flash"
 
@@ -99,7 +99,13 @@ def generate_enrichment(
     generator: EnrichmentGenerator,
 ) -> SchemaEnrichment:
     """Generate an inactive semantic catalog from bounded discovery context."""
-    return parse_enrichment_response(generator.generate(build_enrichment_prompt(schema, profile)))
+    enrichment = parse_enrichment_response(
+        generator.generate(build_enrichment_prompt(schema, profile))
+    )
+    validation = validate_schema_enrichment(schema, enrichment)
+    if not validation.valid:
+        raise ValueError("enrichment contains stale or unknown schema references")
+    return enrichment
 
 
 def cached_enrichment(
@@ -116,6 +122,9 @@ def cached_enrichment(
     if cached.is_file():
         return SchemaEnrichment.model_validate(yaml.safe_load(cached.read_text(encoding="utf-8")))
     enrichment = parse_enrichment_response(generator.generate(prompt))
+    validation = validate_schema_enrichment(schema, enrichment)
+    if not validation.valid:
+        raise ValueError("enrichment contains stale or unknown schema references")
     cached.parent.mkdir(parents=True, exist_ok=True)
     cached.write_text(dump_schema_enrichment(enrichment), encoding="utf-8")
     return enrichment

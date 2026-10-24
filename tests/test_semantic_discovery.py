@@ -1,3 +1,5 @@
+import pytest
+
 from queris.catalog_profile import CatalogProfile
 from queris.schema import ColumnSchema, DatabaseSchema, TableSchema
 from queris.semantic_discovery import (
@@ -111,3 +113,22 @@ tables:
 
     assert first == second
     assert generator.calls == 1
+
+
+def test_generation_rejects_stale_schema_references() -> None:
+    class StaleGenerator:
+        def generate(self, _prompt: str) -> str:
+            return """version: 1
+reviewed: false
+tables:
+  - schema_name: main
+    name: missing_table
+    description: Invented table.
+    columns:
+      - name: missing_column
+        description: Invented column.
+"""
+
+    profile = CatalogProfile(source="read_only_profile", tables=(), relationships=())
+    with pytest.raises(ValueError, match="stale or unknown"):
+        generate_enrichment(_schema(), profile, StaleGenerator())
