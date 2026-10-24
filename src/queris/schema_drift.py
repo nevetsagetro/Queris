@@ -1,6 +1,7 @@
 """Schema comparison and explicit snapshot refresh planning."""
 
 import argparse
+import json
 from pathlib import Path
 from typing import Literal
 
@@ -117,6 +118,8 @@ def refresh_snapshot(
         (root / report.schema_path).read_text(encoding="utf-8")
     )
     drift = compare_schemas(previous, current) if previous else SchemaDrift()
+    if drift.changed:
+        _write_invalidation_marker(root, dataset_id, drift)
     return RefreshPlan(
         dataset_id=dataset_id,
         mode="refreshed",
@@ -124,6 +127,24 @@ def refresh_snapshot(
         schema_changed=drift.changed,
         intelligence_needs_refresh=drift.changed or previous is None,
         drift=drift,
+    )
+
+
+def _write_invalidation_marker(root: Path, dataset_id: str, drift: SchemaDrift) -> None:
+    """Mark affected intelligence stale without deleting a reproducible previous artifact."""
+    marker = root / "cache" / f"{dataset_id}.invalidation.json"
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text(
+        json.dumps(
+            {
+                "dataset_id": dataset_id,
+                "reason": "schema_drift",
+                "drift": drift.model_dump(mode="json"),
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
     )
 
 

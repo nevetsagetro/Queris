@@ -87,7 +87,7 @@ snapshot with a manifest and no mutation of the source artifact.
 - [x] Calculate row counts, distinct counts, null rates, ranges, and basic distributions.
 - [x] Infer probable primary/foreign-key relationships and cardinality.
 - [x] Record discovery runtime, schema fingerprint, and snapshot checksum.
-- [ ] Detect schema drift between two snapshots.
+- [x] Detect schema drift between two snapshots.
 - [~] Expose a machine-readable catalog report and a human-readable summary.
 - [ ] Add performance limits for wide and large databases.
 
@@ -147,8 +147,8 @@ SQL and sources, and reproduce the result locally without repeating LLM work.
 
 - [~] Add explicit snapshot refresh with checksum comparison.
 - [x] Compare schema identifiers and types before deciding whether intelligence is stale.
-- [ ] Invalidate only catalog, queries, and cache entries affected by schema changes.
-- [ ] Reuse approved enrichment when references remain valid.
+- [x] Mark only affected intelligence and cache entries stale when schema changes, preserving the old artifact.
+- [x] Reuse approved enrichment when references remain valid through live-schema validation.
 - [ ] Regenerate only impacted starters and charts.
 - [ ] Report LLM calls, cache hits, execution time, and materialization cost locally.
 - [x] Add a dry-run refresh plan before writing any new artifact.
