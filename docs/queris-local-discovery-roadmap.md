@@ -83,12 +83,12 @@ snapshot with a manifest and no mutation of the source artifact.
 
 **Goal:** generate a trustworthy structural catalog without calling the LLM.
 
-- [ ] Introspect tables, columns, types, nullability, and bounded samples.
-- [ ] Calculate row counts, distinct counts, null rates, ranges, and basic distributions.
-- [ ] Infer probable primary/foreign-key relationships and cardinality.
-- [ ] Record discovery runtime, schema fingerprint, and snapshot checksum.
+- [x] Introspect tables, columns, types, nullability, and bounded samples.
+- [x] Calculate row counts, distinct counts, null rates, ranges, and basic distributions.
+- [x] Infer probable primary/foreign-key relationships and cardinality.
+- [x] Record discovery runtime, schema fingerprint, and snapshot checksum.
 - [ ] Detect schema drift between two snapshots.
-- [ ] Expose a machine-readable catalog report and a human-readable summary.
+- [~] Expose a machine-readable catalog report and a human-readable summary.
 - [ ] Add performance limits for wide and large databases.
 
 **Exit criteria:** the same snapshot produces the same catalog fingerprint and discovery never writes to
@@ -171,12 +171,12 @@ mode's safety guarantees.
 
 ## Recommended next slice
 
-The next implementation slice is the remaining Wave 0 work plus Wave 2:
+The next implementation slice is the remaining Wave 0 work plus the rest of Wave 2:
 
 1. Add the snapshot-first ADR.
-2. Add `discover` to the workspace CLI.
-3. Reuse the existing read-only workflow after materialization.
-4. Add schema fingerprints and catalog reports to the manifest.
+2. Add schema drift comparison and performance limits.
+3. Add a human-readable discovery summary.
+4. Begin bounded LLM-assisted enrichment.
 5. Test one unknown Parquet schema end to end.
 
 Do not add live PostgreSQL before this path is reproducible. The project becomes more useful first by

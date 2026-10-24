@@ -7,6 +7,7 @@ import duckdb
 import yaml
 
 from queris.snapshot import import_snapshot, init_workspace, load_workspace_manifest
+from queris.workspace_discovery import discover_snapshot
 
 
 def _assert_snapshot(workspace: Path, dataset_id: str, table_name: str) -> None:
@@ -86,3 +87,21 @@ def test_import_sqlite_does_not_modify_source(tmp_path: Path) -> None:
 
     assert source.read_bytes() == original_bytes
     _assert_snapshot(workspace, "orders", "orders")
+
+
+def test_discover_snapshot_writes_catalog_and_fingerprint(tmp_path: Path) -> None:
+    source = tmp_path / "events.csv"
+    source.write_text("event_id,category\n1,a\n2,b\n", encoding="utf-8")
+    workspace = tmp_path / "workspace"
+    import_snapshot(source, workspace, dataset_id="events")
+
+    report = discover_snapshot(workspace, "events", sample_limit=0)
+    manifest = load_workspace_manifest(workspace)
+    snapshot = manifest.snapshots[0]
+
+    assert report.table_count == 1
+    assert report.relationship_count == 0
+    assert len(report.schema_fingerprint) == 64
+    assert snapshot.schema_fingerprint == report.schema_fingerprint
+    assert (workspace / report.schema_path).is_file()
+    assert (workspace / report.profile_path).is_file()

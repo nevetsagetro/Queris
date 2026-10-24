@@ -35,6 +35,8 @@ class SnapshotManifest(BaseModel):
     database_path: str
     sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     schema_version: str | None = None
+    schema_fingerprint: str | None = None
+    discovered_at: datetime | None = None
     imported_at: datetime
 
 
@@ -287,9 +289,24 @@ def main() -> None:
     import_parser.add_argument("--license")
     import_parser.add_argument("--format", choices=("duckdb", "parquet", "csv", "zip", "sqlite"))
     import_parser.add_argument("--force", action="store_true")
+    discover_parser = subparsers.add_parser("discover", help="profile a registered snapshot")
+    discover_parser.add_argument("--workspace", type=Path, default=Path("."))
+    discover_parser.add_argument("--dataset-id", required=True)
+    discover_parser.add_argument("--samples", type=int, default=3)
     args = parser.parse_args()
     if args.command == "init":
         print(init_workspace(args.workspace))
+        return
+    if args.command == "discover":
+        from queris.workspace_discovery import discover_snapshot
+
+        print(
+            discover_snapshot(
+                args.workspace,
+                args.dataset_id,
+                sample_limit=args.samples,
+            ).model_dump_json(indent=2)
+        )
         return
     manifest = import_snapshot(
         args.source,
