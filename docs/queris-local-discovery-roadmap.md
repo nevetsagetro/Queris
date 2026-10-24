@@ -150,7 +150,7 @@ SQL and sources, and reproduce the result locally without repeating LLM work.
 - [x] Mark only affected intelligence and cache entries stale when schema changes, preserving the old artifact.
 - [x] Reuse approved enrichment when references remain valid through live-schema validation.
 - [ ] Regenerate only impacted starters and charts.
-- [ ] Report LLM calls, cache hits, execution time, and materialization cost locally.
+- [x] Report LLM calls, cache hits, execution time, and optional token-cost estimates locally.
 - [x] Add a dry-run refresh plan before writing any new artifact.
 
 **Exit criteria:** refreshing an unchanged source performs no unnecessary LLM generation, and schema

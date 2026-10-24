@@ -32,10 +32,12 @@ from queris.language_similarity import (
     find_similar_validated_questions,
     prompt_context,
 )
+from queris.metrics import MetricsEvent, MetricsLedger, MetricsSummary, now_utc
 from queris.pipeline import FullSchemaSelector
 from queris.query_sources import QuerySource
 from queris.recommendations import RecommendedRun, recommend_runs
 from queris.schema import DatabaseSchema, TableSchema
+from queris.usage import GenerationUsage
 
 DEFAULT_DATABASE_PATH = Path("data/retail.duckdb")
 LOGGER = logging.getLogger("queris.api")
@@ -53,6 +55,7 @@ LOGGED_ROUTES = frozenset(
         "/history/demo",
         "/query",
         "/query/replay",
+        "/metrics",
     }
 )
 NonEmptyQuestion = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
@@ -233,6 +236,10 @@ def create_app(
     query_cache: dict[str, AgentQueryResult] = {}
     schema_cache: dict[str, DatabaseSchema] = {}
     profile_cache: dict[str, CatalogProfile] = {}
+    metrics_path = os.getenv("QUERIS_METRICS_PATH")
+    if metrics_path is None and workspace_directory is not None:
+        metrics_path = str(workspace_directory / "cache" / "metrics.jsonl")
+    metrics_ledger = MetricsLedger(metrics_path)
 
     @application.middleware("http")
     async def log_request(request: Request, call_next: RequestHandler) -> Response:
@@ -379,6 +386,10 @@ def create_app(
         schema, _ = active_schema_and_enrichment()
         return _dataset_demo_history(schema)
 
+    @application.get("/metrics", response_model=MetricsSummary)
+    async def metrics() -> MetricsSummary:
+        return metrics_ledger.summary()
+
     @application.post("/query", response_model=QueryResponse)
     async def query(request: QueryRequest, http_request: Request) -> QueryResponse:
         if not active_database.is_file():
@@ -406,6 +417,7 @@ def create_app(
             if intelligence_path is not None
             else ()
         ) or find_similar_questions(request.question)
+        llm_generator: SimilarityAwareGenerator | None = None
         try:
             active_schema = active_schema_and_enrichment()[0]
             prepared_dataset_demo = get_dataset_demo(active_schema, request.demo_id)
@@ -448,11 +460,11 @@ def create_app(
                 )
                 execution_mode = "demo"
             else:
-                generator = SimilarityAwareGenerator(generator_factory(), similar_questions)
+                llm_generator = SimilarityAwareGenerator(generator_factory(), similar_questions)
                 result = run_agent_loop(
                     active_database,
                     request.question,
-                    generator,
+                    llm_generator,
                     FullSchemaSelector(),
                     schema_override=active_schema_and_enrichment()[0],
                 )
@@ -467,6 +479,22 @@ def create_app(
             ) from error
         if not cache_hit:
             cache_result(query_cache, active_database, request.question, result)
+        usage = (
+            llm_generator.generator.usage_snapshot()
+            if llm_generator is not None and hasattr(llm_generator.generator, "usage_snapshot")
+            else None
+        )
+        metrics_ledger.record(
+            MetricsEvent(
+                recorded_at=now_utc(),
+                mode=execution_mode,
+                status=result.status,
+                cache_hit=cache_hit,
+                retry_count=result.retry_count,
+                latency_ms=result.latency_ms,
+                usage=usage or GenerationUsage(),
+            )
+        )
         if result.blocked:
             http_request.state.query_decision = "blocked"
         elif result.status == "success":
