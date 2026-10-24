@@ -128,6 +128,7 @@ export type QueryResult = {
   status: "success" | "failure" | "clarification" | "no_answer";
   question: string;
   sql: string | null;
+  display_sql: string | null;
   columns: string[];
   rows: unknown[][];
   sources: { schema_name: string; table_name: string; columns: string[] }[];

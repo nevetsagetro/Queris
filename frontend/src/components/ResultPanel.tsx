@@ -35,7 +35,8 @@ export function ResultPanel({ result }: { result: QueryResult }) {
 function SqlViewer({ result }: { result: QueryResult }) {
   const [copied, setCopied] = useState(false);
   const sql = result.sql ?? "";
-  const lines = sql.split(/\r?\n/);
+  const displaySql = result.display_sql ?? sql;
+  const lines = displaySql.split(/\r?\n/);
   const mode = result.cache_hit ? "Cache replay" : result.execution_mode === "demo" ? "Prepared demo" : "Generated SQL";
 
   const copySql = async () => {

@@ -260,6 +260,7 @@ async def test_query_returns_typed_safe_agent_result(
     assert payload["status"] == "success"
     assert payload["question"] == question
     assert payload["sql"] == "SELECT COUNT(*) AS order_count FROM orders"
+    assert payload["display_sql"] == "SELECT\n  COUNT(*) AS order_count\nFROM orders"
     assert payload["columns"] == ["order_count"]
     assert payload["rows"] == [[4]]
     assert payload["sources"] == [{"schema_name": "main", "table_name": "orders", "columns": ["*"]}]

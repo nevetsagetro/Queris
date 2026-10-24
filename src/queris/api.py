@@ -43,6 +43,7 @@ from queris.pipeline import FullSchemaSelector
 from queris.query_sources import QuerySource
 from queris.recommendations import RecommendedRun, recommend_runs
 from queris.schema import DatabaseSchema, TableSchema
+from queris.sql_display import format_sql_for_display
 from queris.usage import GenerationUsage
 
 DEFAULT_DATABASE_PATH = Path("data/retail.duckdb")
@@ -154,6 +155,7 @@ class QueryResponse(BaseModel):
     status: Literal["success", "failure", "clarification", "no_answer"]
     question: str
     sql: str | None
+    display_sql: str | None
     columns: tuple[str, ...]
     rows: tuple[tuple[Any, ...], ...]
     sources: tuple[QuerySource, ...]
@@ -185,6 +187,7 @@ class QueryResponse(BaseModel):
             status=result.status,
             question=result.question,
             sql=result.sql,
+            display_sql=format_sql_for_display(result.sql) if result.sql else None,
             columns=result.columns,
             rows=result.rows,
             sources=result.sources,
