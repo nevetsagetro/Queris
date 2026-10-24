@@ -153,6 +153,32 @@ The packaged `queris-demo` Streamlit command remains available for legacy evalua
 compatibility workflows. It is not the primary product interface; new frontend work belongs in the
 React application.
 
+### Start with a public dataset
+
+The frontend does not download or execute database files in the browser. Use the setup CLI to
+download a public source, preserve it under ignored local storage, materialize a DuckDB snapshot,
+and then point the API at that snapshot:
+
+```bash
+queris-dataset chinook
+QUERIS_DATABASE=data/chinook.duckdb \
+QUERIS_DATABASE_DIR=data \
+queris-api
+```
+
+For larger relational analysis, use the public Olist dataset instead:
+
+```bash
+queris-dataset olist
+QUERIS_DATABASE=data/olist.duckdb \
+QUERIS_DATABASE_DIR=data \
+queris-api
+```
+
+Open the React frontend after starting the API. The dataset selector, catalog, source metadata,
+prepared history, and recommendations are then populated from the local snapshot. Source URLs and
+licenses are documented in [`docs/additional-datasets.md`](docs/additional-datasets.md).
+
 ## Snapshot workflow
 
 For a new database, use an isolated workspace rather than connecting the LLM directly to a remote
