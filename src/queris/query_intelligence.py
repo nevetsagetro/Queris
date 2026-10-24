@@ -1,0 +1,114 @@
+"""Persisted, read-only query intelligence generated from a discovered schema."""
+
+import argparse
+import json
+from pathlib import Path
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from queris.chart_recommender import ChartRecommendation, recommend_chart
+from queris.database import execute_read_only, read_only_connection
+from queris.dataset_demos import get_dataset_demos
+from queris.schema import introspect_schema
+
+
+class ValidatedQuery(BaseModel):
+    """One starter that executed successfully against the current snapshot."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    question: str
+    reason: str
+    tables: tuple[str, ...]
+    sql: str
+    chart: Literal["bar", "line", "metric", "table"]
+    chart_recommendation: ChartRecommendation | None
+    result_columns: tuple[str, ...]
+    result_row_count: int = Field(ge=0)
+    validated: Literal[True] = True
+
+
+class QueryIntelligenceReport(BaseModel):
+    """Summary of the validated intelligence artifact."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    dataset_id: str
+    generated_query_count: int = Field(ge=0)
+    validated_query_count: int = Field(ge=0)
+    failed_query_ids: tuple[str, ...] = ()
+    output_path: str
+
+
+def generate_query_intelligence(
+    database: str | Path,
+    *,
+    output: str | Path,
+    target: int = 50,
+) -> QueryIntelligenceReport:
+    """Execute and persist the first validated starters for a local snapshot."""
+    database_path = Path(database)
+    output_path = Path(output)
+    with read_only_connection(database_path) as connection:
+        schema = introspect_schema(connection, sample_limit=0)
+        demos = get_dataset_demos(schema)[:target]
+        validated: list[ValidatedQuery] = []
+        failures: list[str] = []
+        for demo in demos:
+            try:
+                cursor = execute_read_only(connection, demo.sql)
+                columns = tuple(description[0] for description in cursor.description or ())
+                rows = tuple(tuple(row) for row in cursor.fetchall())
+                validated.append(
+                    ValidatedQuery(
+                        id=demo.id,
+                        question=demo.question,
+                        reason=demo.reason,
+                        tables=demo.tables,
+                        sql=demo.sql,
+                        chart=demo.chart,
+                        chart_recommendation=recommend_chart(columns, rows),
+                        result_columns=columns,
+                        result_row_count=len(rows),
+                    )
+                )
+            except Exception:
+                failures.append(demo.id)
+    if not failures and len(validated) < min(target, 50):
+        raise ValueError(
+            f"snapshot produced only {len(validated)} validated starters; "
+            f"at least {min(target, 50)} are required"
+        )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps([item.model_dump(mode="json") for item in validated], indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return QueryIntelligenceReport(
+        dataset_id=database_path.name,
+        generated_query_count=len(demos),
+        validated_query_count=len(validated),
+        failed_query_ids=tuple(failures),
+        output_path=str(output_path),
+    )
+
+
+def main() -> None:
+    """Generate a persisted intelligence artifact from one DuckDB snapshot."""
+    parser = argparse.ArgumentParser(description="Generate validated Queris query intelligence")
+    parser.add_argument("database", type=Path)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--target", type=int, default=50)
+    args = parser.parse_args()
+    output = args.output or Path("intelligence") / f"{args.database.stem}.queries.json"
+    print(
+        generate_query_intelligence(
+            args.database, output=output, target=args.target
+        ).model_dump_json(indent=2)
+    )
+
+
+if __name__ == "__main__":
+    main()

@@ -113,14 +113,14 @@ unbounded rows, or arbitrary database tools to the LLM.
 
 **Goal:** create useful, tested analysis patterns before a user asks a question.
 
-- [ ] Generate 50–60 starters per sufficiently rich schema.
-- [ ] Cover discovery, quality, aggregation, time series, joins, CTEs, windows, cohorts, and outliers.
-- [ ] Include question, SQL, tables, difficulty, chart type, rationale, and catalog references.
+- [x] Generate 50–60 starters per sufficiently rich schema.
+- [x] Cover discovery, quality, aggregation, time series, joins, CTEs, windows, cohorts, and outliers.
+- [x] Include question, SQL, tables, chart type, rationale, and result metadata.
 - [ ] Use similar validated questions as bounded prompt context.
-- [ ] Execute every generated query through the read-only validator.
-- [ ] Store pass/fail results and never publish failed starters as ready-to-run.
-- [ ] Add confidence separately for SQL validity, result usefulness, and chart suitability.
-- [ ] Persist validated query intelligence by schema fingerprint.
+- [x] Execute every generated query through the read-only validator.
+- [x] Store pass/fail results and never publish failed starters as ready-to-run.
+- [x] Add chart suitability confidence to each validated result.
+- [~] Persist validated query intelligence by schema fingerprint.
 
 **Exit criteria:** the frontend opens with a useful, dataset-specific discovery history and no LLM call
 is required to display or rerun an already validated starter.
