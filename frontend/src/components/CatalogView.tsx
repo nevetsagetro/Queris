@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Catalog, CatalogProfile, DatasetInfo, EnrichmentStatus, Example } from "../types";
 
 type CatalogViewProps = {
@@ -14,6 +14,10 @@ export function CatalogView({ catalog, profile, enrichment, dataset, examples, o
   const [selected, setSelected] = useState(0);
   const table = catalog?.tables[selected];
   const selectedProfile = profile?.tables.find((item) => item.name === table?.name);
+
+  useEffect(() => {
+    setSelected(0);
+  }, [catalog]);
 
   return (
     <section>
