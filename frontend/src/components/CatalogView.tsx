@@ -31,7 +31,7 @@ export function CatalogView({ catalog, profile, enrichment, dataset, examples, o
           <div className="dataset-facts">
             <span><small>Local file</small><strong>{dataset.id}</strong></span>
             {dataset.license && <span><small>License</small><strong>{dataset.license}</strong></span>}
-            {dataset.source_url ? <a href={dataset.source_url} target="_blank" rel="noreferrer">Public source URL registered ↗</a> : null}
+            {dataset.source_url ? <a href={dataset.source_url} target="_blank" rel="noreferrer" aria-label={`Open public source for ${dataset.name}`} title="Open public source">Source ↗</a> : null}
           </div>
         </div>
       )}
