@@ -57,7 +57,7 @@ Read-only execution, charts, history, and cache
 - [x] Define a versioned snapshot manifest with source URL, format, checksum, retrieval time, and schema version.
 - [x] Define dataset identity independently from a local filename.
 - [x] Document snapshot mode as the default and live mode as an advanced option.
-- [ ] Add an ADR for snapshot-first local discovery and immutable source artifacts.
+- [x] Add an ADR for snapshot-first local discovery and immutable source artifacts.
 
 **Exit criteria:** a new user can understand what Queris owns, what it downloads, what it writes, and
 what the LLM can or cannot do without reading implementation details.
