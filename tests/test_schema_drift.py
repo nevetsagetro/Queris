@@ -34,6 +34,7 @@ def test_compare_schemas_reports_column_and_type_drift() -> None:
     assert drift.removed_columns == ("orders.amount",)
     assert drift.changed_types == ("orders.order_id",)
     assert drift.changed is True
+    assert drift.affected_tables == frozenset({"orders"})
 
 
 def test_drift_marker_preserves_previous_intelligence_and_records_impact(tmp_path: Path) -> None:

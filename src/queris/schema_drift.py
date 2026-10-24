@@ -8,6 +8,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 from queris.schema import DatabaseSchema
+from queris.query_intelligence import selectively_refresh_query_intelligence
 from queris.snapshot import SnapshotManifest, import_snapshot, load_workspace_manifest
 from queris.workspace_discovery import discover_snapshot
 
@@ -32,6 +33,14 @@ class SchemaDrift(BaseModel):
             or self.removed_columns
             or self.changed_types
         )
+
+    @property
+    def affected_tables(self) -> frozenset[str]:
+        """Return table names whose intelligence may no longer be valid."""
+        names = set(self.added_tables) | set(self.removed_tables)
+        for reference in (*self.added_columns, *self.removed_columns, *self.changed_types):
+            names.add(reference.split(".", 1)[0])
+        return frozenset(names)
 
 
 class RefreshPlan(BaseModel):
@@ -104,7 +113,7 @@ def refresh_snapshot(
             intelligence_needs_refresh=previous is None,
             drift=SchemaDrift(),
         )
-    import_snapshot(
+    refreshed_snapshot = import_snapshot(
         snapshot.source,
         root,
         dataset_id=dataset_id,
@@ -120,6 +129,14 @@ def refresh_snapshot(
     drift = compare_schemas(previous, current) if previous else SchemaDrift()
     if drift.changed:
         _write_invalidation_marker(root, dataset_id, drift)
+        intelligence_path = root / "intelligence" / f"{dataset_id}.queries.json"
+        if intelligence_path.is_file() and previous is not None:
+            selectively_refresh_query_intelligence(
+                root / refreshed_snapshot.database_path,
+                output=intelligence_path,
+                previous=intelligence_path,
+                affected_tables=set(drift.affected_tables),
+            )
     return RefreshPlan(
         dataset_id=dataset_id,
         mode="refreshed",
