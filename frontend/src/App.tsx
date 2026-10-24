@@ -34,9 +34,10 @@ function App() {
   useEffect(() => {
     void loadDiscovery()
       .then(([loadedExamples, loadedCatalog, loadedDemoHistory, loadedDatasets, loadedProfile, loadedEnrichment, loadedRecommendations]) => {
-        setExamples(loadedExamples);
+        const active = loadedDatasets.find((dataset) => dataset.active) ?? null;
+        setExamples(startersForDataset(loadedExamples, loadedRecommendations, active));
         setCatalog(loadedCatalog);
-        setDemoHistory(loadedDemoHistory);
+        setDemoHistory(isOnlineRetail(active) ? loadedDemoHistory : []);
         setDatasets(loadedDatasets);
         setProfile(loadedProfile);
         setEnrichment(loadedEnrichment);
@@ -80,15 +81,18 @@ function App() {
     setError(null);
     try {
       const loadedDatasets = await selectDataset(datasetId);
-      const [, loadedCatalog, loadedDemoHistory, , loadedProfile, loadedEnrichment, loadedRecommendations] = await loadDiscovery();
+      const [loadedExamples, loadedCatalog, loadedDemoHistory, , loadedProfile, loadedEnrichment, loadedRecommendations] = await loadDiscovery();
+      const active = loadedDatasets.find((dataset) => dataset.active) ?? null;
       setDatasets(loadedDatasets);
+      setExamples(startersForDataset(loadedExamples, loadedRecommendations, active));
       setCatalog(loadedCatalog);
-      setDemoHistory(loadedDemoHistory);
+      setDemoHistory(isOnlineRetail(active) ? loadedDemoHistory : []);
       setProfile(loadedProfile);
       setEnrichment(loadedEnrichment);
       setRecommendations(loadedRecommendations);
       setResult(null);
       setSelectedDemoId(null);
+      setQuestion("");
       setHistory([]);
       window.localStorage.removeItem("queris.history");
     } catch (reason) {
@@ -152,6 +156,22 @@ function App() {
 
 function readHistory(): QueryResult[] {
   try { return JSON.parse(window.localStorage.getItem("queris.history") ?? "[]") as QueryResult[]; } catch { return []; }
+}
+
+function isOnlineRetail(dataset: DatasetInfo | null): boolean {
+  return dataset?.id === "online_retail.duckdb";
+}
+
+function startersForDataset(examples: Example[], recommendations: RecommendedRun[], dataset: DatasetInfo | null): Example[] {
+  if (isOnlineRetail(dataset)) return examples;
+  return recommendations.map((recommendation) => ({
+    id: recommendation.demo_id,
+    title: recommendation.question,
+    question: recommendation.question,
+    category: "discovery",
+    tables: recommendation.tables,
+    chart: recommendation.chart,
+  }));
 }
 
 export default App;
