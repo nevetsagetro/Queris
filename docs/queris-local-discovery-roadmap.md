@@ -98,11 +98,11 @@ the business database.
 
 **Goal:** use the LLM where interpretation adds value, while keeping evidence and review explicit.
 
-- [ ] Build a bounded discovery prompt from schema, profiles, relationships, and safe samples.
-- [ ] Generate table descriptions, column meanings, aliases, units, and business terms.
+- [x] Build a bounded discovery prompt from schema, profiles, relationships, and safe samples.
+- [x] Generate table descriptions, column meanings, aliases, units, and business terms.
 - [ ] Generate ambiguity notes and candidate join explanations.
-- [ ] Generate a versioned enrichment draft with source evidence references.
-- [ ] Require human approval before activating semantic metadata.
+- [x] Generate a versioned enrichment draft with source evidence references.
+- [x] Require human approval before activating semantic metadata.
 - [ ] Reject stale references and preserve the previous approved catalog on failure.
 - [ ] Cache enrichment by snapshot checksum and prompt version.
 
