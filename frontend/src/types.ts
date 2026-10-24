@@ -82,6 +82,17 @@ export type EnrichmentStatus = {
   issues: unknown[];
 };
 
+export type MetricsSummary = {
+  query_count: number;
+  llm_count: number;
+  cache_hits: number;
+  demo_count: number;
+  total_retries: number;
+  total_latency_ms: number;
+  usage: { input_tokens: number; output_tokens: number; total_tokens: number };
+  estimated_cost_usd: string | null;
+};
+
 export type RecommendedRun = {
   id: string;
   demo_id: string;

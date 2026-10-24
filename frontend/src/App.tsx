@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { loadDiscovery, queryData, replayQuery, selectDataset } from "./api/client";
-import { Catalog, CatalogProfile, DatasetInfo, DemoHistoryItem, EnrichmentStatus, Example, QueryResult, RecommendedRun, View } from "./types";
+import { Catalog, CatalogProfile, DatasetInfo, DemoHistoryItem, EnrichmentStatus, Example, MetricsSummary, QueryResult, RecommendedRun, View } from "./types";
 import { AskView } from "./components/AskView";
 import { CatalogView } from "./components/CatalogView";
 import { HistoryView } from "./components/HistoryView";
@@ -23,6 +23,7 @@ function App() {
   const [profile, setProfile] = useState<CatalogProfile | null>(null);
   const [enrichment, setEnrichment] = useState<EnrichmentStatus | null>(null);
   const [recommendations, setRecommendations] = useState<RecommendedRun[]>([]);
+  const [metrics, setMetrics] = useState<MetricsSummary | null>(null);
   const [result, setResult] = useState<QueryResult | null>(null);
   const [history, setHistory] = useState<QueryResult[]>(() => readHistory());
   const [busy, setBusy] = useState(false);
@@ -33,7 +34,7 @@ function App() {
 
   useEffect(() => {
     void loadDiscovery()
-      .then(([loadedExamples, loadedCatalog, loadedDemoHistory, loadedDatasets, loadedProfile, loadedEnrichment, loadedRecommendations]) => {
+      .then(([loadedExamples, loadedCatalog, loadedDemoHistory, loadedDatasets, loadedProfile, loadedEnrichment, loadedRecommendations, loadedMetrics]) => {
         setExamples(loadedExamples);
         setCatalog(loadedCatalog);
         setDemoHistory(loadedDemoHistory);
@@ -41,6 +42,7 @@ function App() {
         setProfile(loadedProfile);
         setEnrichment(loadedEnrichment);
         setRecommendations(loadedRecommendations);
+        setMetrics(loadedMetrics);
       })
       .catch((reason: Error) => setError(reason.message));
   }, []);
@@ -83,7 +85,7 @@ function App() {
     setError(null);
     try {
       const loadedDatasets = await selectDataset(datasetId);
-      const [loadedExamples, loadedCatalog, loadedDemoHistory, , loadedProfile, loadedEnrichment, loadedRecommendations] = await loadDiscovery();
+      const [loadedExamples, loadedCatalog, loadedDemoHistory, , loadedProfile, loadedEnrichment, loadedRecommendations, loadedMetrics] = await loadDiscovery();
       setDatasets(loadedDatasets);
       setExamples(loadedExamples);
       setCatalog(loadedCatalog);
@@ -91,6 +93,7 @@ function App() {
       setProfile(loadedProfile);
       setEnrichment(loadedEnrichment);
       setRecommendations(loadedRecommendations);
+      setMetrics(loadedMetrics);
       setResult(null);
       setSelectedDemoId(null);
       setQuestion("");
@@ -149,7 +152,7 @@ function App() {
           />
         )}
         {view === "catalog" && <CatalogView catalog={catalog} profile={profile} enrichment={enrichment} dataset={activeDataset} onUseExample={useExample} examples={examples} />}
-        {view === "history" && <HistoryView history={history} demoHistory={demoHistory} recommendations={recommendations} onSelect={setResult} onRunExample={runExample} />}
+        {view === "history" && <HistoryView history={history} demoHistory={demoHistory} recommendations={recommendations} metrics={metrics} onSelect={setResult} onRunExample={runExample} />}
       </main>
     </div>
   );
