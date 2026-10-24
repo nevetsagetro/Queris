@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
-import { loadDiscovery, queryData } from "./api/client";
-import { DemoHistoryItem, Example, QueryResult, View } from "./types";
+import { loadDiscovery, queryData, selectDataset } from "./api/client";
+import { CatalogProfile, DatasetInfo, DemoHistoryItem, EnrichmentStatus, Example, QueryResult, RecommendedRun, View } from "./types";
 import { AskView } from "./components/AskView";
 import { CatalogView } from "./components/CatalogView";
 import { HistoryView } from "./components/HistoryView";
@@ -19,6 +19,10 @@ function App() {
   const [examples, setExamples] = useState<Example[]>([]);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [demoHistory, setDemoHistory] = useState<DemoHistoryItem[]>([]);
+  const [datasets, setDatasets] = useState<DatasetInfo[]>([]);
+  const [profile, setProfile] = useState<CatalogProfile | null>(null);
+  const [enrichment, setEnrichment] = useState<EnrichmentStatus | null>(null);
+  const [recommendations, setRecommendations] = useState<RecommendedRun[]>([]);
   const [result, setResult] = useState<QueryResult | null>(null);
   const [history, setHistory] = useState<QueryResult[]>(() => readHistory());
   const [busy, setBusy] = useState(false);
@@ -26,10 +30,14 @@ function App() {
 
   useEffect(() => {
     void loadDiscovery()
-      .then(([loadedExamples, loadedCatalog, loadedDemoHistory]) => {
+      .then(([loadedExamples, loadedCatalog, loadedDemoHistory, loadedDatasets, loadedProfile, loadedEnrichment, loadedRecommendations]) => {
         setExamples(loadedExamples);
         setCatalog(loadedCatalog);
         setDemoHistory(loadedDemoHistory);
+        setDatasets(loadedDatasets);
+        setProfile(loadedProfile);
+        setEnrichment(loadedEnrichment);
+        setRecommendations(loadedRecommendations);
       })
       .catch((reason: Error) => setError(reason.message));
   }, []);
@@ -65,6 +73,25 @@ function App() {
     void runQuery(undefined, { question: example.question, demoId: example.id });
   };
 
+  const changeDataset = async (datasetId: string) => {
+    setError(null);
+    try {
+      const loadedDatasets = await selectDataset(datasetId);
+      const [, loadedCatalog, loadedDemoHistory, , loadedProfile, loadedEnrichment, loadedRecommendations] = await loadDiscovery();
+      setDatasets(loadedDatasets);
+      setCatalog(loadedCatalog);
+      setDemoHistory(loadedDemoHistory);
+      setProfile(loadedProfile);
+      setEnrichment(loadedEnrichment);
+      setRecommendations(loadedRecommendations);
+      setResult(null);
+      setHistory([]);
+      window.localStorage.removeItem("queris.history");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "The dataset could not be selected.");
+    }
+  };
+
   const useExample = (example: Example) => {
     setQuestion(example.question);
     setSelectedDemoId(example.id.startsWith("history-") ? example.id : example.id);
@@ -91,7 +118,7 @@ function App() {
             </button>
           ))}
         </nav>
-        <div className="connection"><span className="status-dot" /> Local DuckDB</div>
+        <label className="dataset-picker"><span className="status-dot" /><span className="sr-only">Active dataset</span><select value={datasets.find((dataset) => dataset.active)?.id ?? ""} onChange={(event) => void changeDataset(event.target.value)} disabled={!datasets.length}><option value="">No dataset</option>{datasets.map((dataset) => <option value={dataset.id} key={dataset.id}>{dataset.name}</option>)}</select></label>
       </header>
 
       <main className="main-content">
@@ -108,8 +135,8 @@ function App() {
             result={result}
           />
         )}
-        {view === "catalog" && <CatalogView catalog={catalog} onUseExample={useExample} examples={examples} />}
-        {view === "history" && <HistoryView history={history} demoHistory={demoHistory} onSelect={setResult} onRunExample={runExample} />}
+        {view === "catalog" && <CatalogView catalog={catalog} profile={profile} enrichment={enrichment} onUseExample={useExample} examples={examples} />}
+        {view === "history" && <HistoryView history={history} demoHistory={demoHistory} recommendations={recommendations} onSelect={setResult} onRunExample={runExample} />}
       </main>
     </div>
   );

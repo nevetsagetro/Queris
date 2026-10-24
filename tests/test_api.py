@@ -58,10 +58,22 @@ async def test_health_reports_database_readiness(sample_database: Path) -> None:
 async def test_catalog_and_examples_are_discoverable(sample_database: Path) -> None:
     async with api_client(create_app(database_path=sample_database)) as client:
         catalog = await client.get("/catalog")
+        datasets = await client.get("/datasets")
+        profile = await client.get("/catalog/profile")
+        enrichment = await client.get("/catalog/enrichment")
+        recommendations = await client.get("/recommendations")
         examples = await client.get("/examples")
         demo_history = await client.get("/history/demo")
 
     assert catalog.status_code == 200
+    assert datasets.status_code == 200
+    assert any(item["active"] for item in datasets.json())
+    assert profile.status_code == 200
+    assert profile.json()["source"] == "read_only_profile"
+    assert enrichment.status_code == 200
+    assert enrichment.json()["status"] in {"raw", "approved", "stale"}
+    assert recommendations.status_code == 200
+    assert recommendations.json()
     assert catalog.json()["table_count"] == 5
     assert {table["name"] for table in catalog.json()["tables"]} == {
         "categories",

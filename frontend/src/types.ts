@@ -31,6 +31,64 @@ export type Catalog = {
   tables: CatalogTable[];
 };
 
+export type DatasetInfo = {
+  id: string;
+  name: string;
+  size_bytes: number;
+  modified_at: string;
+  active: boolean;
+};
+
+export type CatalogProfile = {
+  source: "read_only_profile";
+  tables: TableProfile[];
+  relationships: RelationshipProfile[];
+};
+
+export type TableProfile = {
+  schema_name: string;
+  name: string;
+  row_count: number;
+  columns: ColumnProfile[];
+};
+
+export type ColumnProfile = {
+  name: string;
+  data_type: string;
+  row_count: number;
+  null_count: number;
+  distinct_count: number;
+  min_value: unknown;
+  max_value: unknown;
+};
+
+export type RelationshipProfile = {
+  left_table: string;
+  left_column: string;
+  right_table: string;
+  right_column: string;
+  cardinality: "1:1" | "1:N" | "N:1" | "N:N";
+  coverage_percent: number;
+  confidence: "low" | "medium" | "high";
+};
+
+export type EnrichmentStatus = {
+  status: "raw" | "approved" | "stale";
+  reviewed: boolean;
+  table_count: number;
+  issues: unknown[];
+};
+
+export type RecommendedRun = {
+  id: string;
+  demo_id: string;
+  question: string;
+  reason: string;
+  tables: string[];
+  chart: ChartKind;
+  priority: number;
+};
+
 export type DemoHistoryItem = {
   id: string;
   source: "demo";
