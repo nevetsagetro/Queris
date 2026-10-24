@@ -6,6 +6,8 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
+from queris.snapshot import load_workspace_manifest
+
 DATASET_PROVENANCE: dict[str, dict[str, str]] = {
     "online_retail.duckdb": {
         "display_name": "UCI Online Retail",
@@ -64,6 +66,7 @@ def discover_datasets(
     directory: str | Path,
     active_path: str | Path,
     metadata_directory: str | Path | None = None,
+    workspace: str | Path | None = None,
 ) -> tuple[DatasetInfo, ...]:
     """List DuckDB files in a trusted directory without exposing local paths."""
     root = Path(directory).expanduser().resolve()
@@ -75,7 +78,7 @@ def discover_datasets(
         if not path.is_file():
             continue
         stat = path.stat()
-        source = _source_for(path, metadata_directory)
+        source = _source_for(path, metadata_directory, workspace)
         datasets.append(
             DatasetInfo(
                 id=path.name,
@@ -105,18 +108,43 @@ def discover_datasets(
     return tuple(datasets)
 
 
-def _source_for(path: Path, metadata_directory: str | Path | None) -> DatasetSource | None:
+def _source_for(
+    path: Path,
+    metadata_directory: str | Path | None,
+    workspace: str | Path | None,
+) -> DatasetSource | None:
     """Load an optional source manifest, failing closed on invalid metadata."""
-    if metadata_directory is None:
-        return None
-    manifest = Path(metadata_directory) / f"{path.stem}.source.yaml"
-    if not manifest.is_file():
+    if metadata_directory is not None:
+        manifest = Path(metadata_directory) / f"{path.stem}.source.yaml"
+        if manifest.is_file():
+            try:
+                document = yaml.safe_load(manifest.read_text(encoding="utf-8"))
+                return DatasetSource.model_validate(document)
+            except (OSError, yaml.YAMLError, ValueError):
+                pass
+    if workspace is None:
         return None
     try:
-        document = yaml.safe_load(manifest.read_text(encoding="utf-8"))
-        return DatasetSource.model_validate(document)
-    except (OSError, yaml.YAMLError, ValueError):
+        root = Path(workspace).expanduser().resolve()
+        workspace_manifest = load_workspace_manifest(root)
+        snapshot = next(
+            (
+                item
+                for item in workspace_manifest.snapshots
+                if (root / item.database_path).resolve() == path.resolve()
+            ),
+            None,
+        )
+    except (OSError, ValueError):
         return None
+    if snapshot is None or not snapshot.source_url:
+        return None
+    return DatasetSource(
+        name=snapshot.name or snapshot.source_name or path.stem.replace("_", " ").title(),
+        source_name=snapshot.source_name,
+        source_url=snapshot.source_url,
+        license=snapshot.license,
+    )
 
 
 def select_dataset(directory: str | Path, dataset_id: str) -> Path:

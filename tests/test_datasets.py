@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from queris.datasets import discover_datasets, select_dataset
+from queris.snapshot import import_snapshot
 
 
 def test_discover_datasets_exposes_only_local_duckdb_files(tmp_path: Path) -> None:
@@ -36,3 +37,26 @@ def test_select_dataset_rejects_path_traversal(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError):
         select_dataset(tmp_path, "../safe.duckdb")
+
+
+def test_discovery_reads_public_provenance_from_snapshot_workspace(tmp_path: Path) -> None:
+    source = tmp_path / "events.csv"
+    source.write_text("event_id\n1\n2\n", encoding="utf-8")
+    workspace = tmp_path / "workspace"
+    import_snapshot(
+        source,
+        workspace,
+        dataset_id="events",
+        name="Public Events",
+        source_name="Public publisher",
+        source_url="https://example.org/events.csv",
+    )
+
+    [dataset] = discover_datasets(
+        workspace / "snapshots",
+        workspace / "snapshots" / "events.duckdb",
+        workspace=workspace,
+    )
+
+    assert dataset.name == "Public Events"
+    assert dataset.source_url == "https://example.org/events.csv"

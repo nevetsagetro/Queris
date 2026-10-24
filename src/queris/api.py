@@ -217,6 +217,11 @@ def create_app(
     )
     active_database = configured_database.expanduser().resolve()
     metadata_directory = Path(os.getenv("QUERIS_METADATA_DIR", "metadata")).expanduser().resolve()
+    workspace_directory = (
+        Path(os.environ["QUERIS_WORKSPACE"]).expanduser().resolve()
+        if os.getenv("QUERIS_WORKSPACE")
+        else None
+    )
     application = FastAPI(title="Queris API", version="0.1.0")
     application.add_middleware(
         CORSMiddleware,
@@ -277,7 +282,9 @@ def create_app(
 
     @application.get("/datasets", response_model=tuple[DatasetInfo, ...])
     async def datasets() -> tuple[DatasetInfo, ...]:
-        return discover_datasets(dataset_directory, active_database, metadata_directory)
+        return discover_datasets(
+            dataset_directory, active_database, metadata_directory, workspace_directory
+        )
 
     @application.post("/datasets/select", response_model=tuple[DatasetInfo, ...])
     async def select_dataset_route(request: DatasetSelectionRequest) -> tuple[DatasetInfo, ...]:
@@ -289,7 +296,9 @@ def create_app(
         query_cache.clear()
         schema_cache.clear()
         profile_cache.clear()
-        return discover_datasets(dataset_directory, active_database, metadata_directory)
+        return discover_datasets(
+            dataset_directory, active_database, metadata_directory, workspace_directory
+        )
 
     def active_schema_and_enrichment() -> tuple[DatabaseSchema, EnrichmentStatus]:
         raw_schema = load_schema_catalog(schema_cache, active_database)

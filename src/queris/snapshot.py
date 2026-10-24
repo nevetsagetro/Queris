@@ -26,6 +26,7 @@ class SnapshotManifest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     dataset_id: str = Field(min_length=1)
+    name: str | None = None
     source: str = Field(min_length=1)
     source_name: str | None = None
     source_url: str | None = None
@@ -65,7 +66,9 @@ def import_snapshot(
     workspace: str | Path,
     *,
     dataset_id: str,
+    name: str | None = None,
     source_name: str | None = None,
+    source_url: str | None = None,
     license: str | None = None,
     format: WorkspaceFormat | None = None,
     force: bool = False,
@@ -90,9 +93,10 @@ def import_snapshot(
     _materialize(raw_path, database_path, detected_format, force=force)
     manifest = SnapshotManifest(
         dataset_id=dataset_id,
+        name=name,
         source=source_text,
         source_name=source_name,
-        source_url=source_text if is_url else None,
+        source_url=source_url or (source_text if is_url else None),
         license=license,
         format=detected_format,
         raw_path=str(raw_path.relative_to(root)),
@@ -285,7 +289,9 @@ def main() -> None:
     import_parser.add_argument("source")
     import_parser.add_argument("--workspace", type=Path, default=Path("."))
     import_parser.add_argument("--dataset-id", required=True)
+    import_parser.add_argument("--name")
     import_parser.add_argument("--source-name")
+    import_parser.add_argument("--source-url")
     import_parser.add_argument("--license")
     import_parser.add_argument("--format", choices=("duckdb", "parquet", "csv", "zip", "sqlite"))
     import_parser.add_argument("--force", action="store_true")
@@ -312,7 +318,9 @@ def main() -> None:
         args.source,
         args.workspace,
         dataset_id=args.dataset_id,
+        name=args.name,
         source_name=args.source_name,
+        source_url=args.source_url,
         license=args.license,
         format=args.format,
         force=args.force,
