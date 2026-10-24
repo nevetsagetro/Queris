@@ -27,7 +27,8 @@ function App() {
   const [history, setHistory] = useState<QueryResult[]>(() => readHistory());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const activeDataset = datasets.find((dataset) => dataset.active) ?? null;
+  const publicDatasets = datasets.filter((dataset) => dataset.source_url);
+  const activeDataset = publicDatasets.find((dataset) => dataset.active) ?? null;
   const datasetAvailable = activeDataset !== null;
 
   useEffect(() => {
@@ -121,8 +122,8 @@ function App() {
           ))}
         </nav>
         <div className="dataset-picker" aria-label="Dataset context">
-          <span className={datasetAvailable ? "dataset-status" : "dataset-status unavailable"} aria-label={datasetAvailable ? "Dataset available locally" : "No dataset available"}><span className="status-dot" aria-hidden="true" /><span>{datasetAvailable ? "Ready" : "Unavailable"}</span></span>
-          <label className="dataset-select"><span className="sr-only">Active dataset</span><select aria-label="Active dataset" value={activeDataset?.id ?? ""} onChange={(event) => void changeDataset(event.target.value)} disabled={!datasets.length}><option value="">No dataset</option>{datasets.map((dataset) => <option value={dataset.id} key={dataset.id}>{dataset.name}</option>)}</select></label>
+          <span className={datasetAvailable ? "dataset-status" : "dataset-status unavailable"} aria-label={datasetAvailable ? "Public dataset available locally" : "No public dataset available"}><span className="status-dot" aria-hidden="true" /><span>{datasetAvailable ? "Ready" : "Unavailable"}</span></span>
+          <label className="dataset-select"><span className="sr-only">Active public dataset</span><select aria-label="Active public dataset" value={activeDataset?.id ?? ""} onChange={(event) => void changeDataset(event.target.value)} disabled={!publicDatasets.length}><option value="">No public dataset</option>{publicDatasets.map((dataset) => <option value={dataset.id} key={dataset.id}>{dataset.name}</option>)}</select></label>
           {activeDataset?.source_url && <a className="source-link" href={activeDataset.source_url} target="_blank" rel="noreferrer" aria-label={`Verify ${activeDataset.name} source`} title="Open original dataset source">Verify source <span aria-hidden="true">↗</span></a>}
         </div>
       </header>
