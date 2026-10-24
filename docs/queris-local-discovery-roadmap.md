@@ -52,11 +52,11 @@ Read-only execution, charts, history, and cache
 
 **Goal:** make the local discovery product explicit before adding more connectors.
 
-- [ ] Define the public CLI vocabulary: `init`, `import`, `discover`, `enrich`, `ask`, `refresh`.
-- [ ] Define the `.queris/` workspace layout for manifests, snapshots, catalog, intelligence, and cache.
-- [ ] Define a versioned snapshot manifest with source URL, format, checksum, retrieval time, and schema version.
-- [ ] Define dataset identity independently from a local filename.
-- [ ] Document snapshot mode as the default and live mode as an advanced option.
+- [~] Define the public CLI vocabulary: `init` and `import` are implemented; `discover`, `enrich`, `ask`, and `refresh` remain.
+- [x] Define the `.queris/` workspace layout for manifests, snapshots, catalog, intelligence, and cache.
+- [x] Define a versioned snapshot manifest with source URL, format, checksum, retrieval time, and schema version.
+- [x] Define dataset identity independently from a local filename.
+- [x] Document snapshot mode as the default and live mode as an advanced option.
 - [ ] Add an ADR for snapshot-first local discovery and immutable source artifacts.
 
 **Exit criteria:** a new user can understand what Queris owns, what it downloads, what it writes, and
@@ -66,15 +66,15 @@ what the LLM can or cannot do without reading implementation details.
 
 **Goal:** turn common source formats into a reproducible local DuckDB snapshot.
 
-- [ ] Implement a typed `SnapshotSource` contract.
-- [ ] Download HTTP(S) files with size limits, timeout, checksum, and refusal to overwrite by default.
-- [ ] Preserve the original artifact under `raw/` and keep it separate from the derived database.
-- [ ] Materialize Parquet and CSV into DuckDB.
-- [ ] Materialize ZIP archives containing CSV files into related DuckDB tables.
-- [ ] Materialize SQLite databases without modifying the source file.
-- [ ] Reject arbitrary executable or unsupported formats with an actionable error.
-- [ ] Register public name, source URL, license, and retrieval timestamp.
-- [ ] Add cleanup rules for temporary extraction directories.
+- [x] Implement a typed snapshot manifest contract.
+- [x] Download HTTP(S) files with size limits, timeout, checksum, and refusal to overwrite by default.
+- [x] Preserve the original artifact under `raw/` and keep it separate from the derived database.
+- [x] Materialize Parquet and CSV into DuckDB.
+- [x] Materialize ZIP archives containing CSV files into related DuckDB tables.
+- [x] Materialize SQLite databases without modifying the source file.
+- [x] Reject arbitrary executable or unsupported formats with an actionable error.
+- [x] Register public name, source URL, license, and retrieval timestamp.
+- [x] Add cleanup rules for temporary extraction directories.
 
 **Exit criteria:** a public Parquet, CSV, ZIP, and SQLite source each produces a new local DuckDB
 snapshot with a manifest and no mutation of the source artifact.
@@ -171,12 +171,12 @@ mode's safety guarantees.
 
 ## Recommended next slice
 
-The next implementation slice is Wave 0 plus the first half of Wave 1:
+The next implementation slice is the remaining Wave 0 work plus Wave 2:
 
-1. Add `.queris/` manifest and workspace contracts.
-2. Add Parquet and CSV importers.
+1. Add the snapshot-first ADR.
+2. Add `discover` to the workspace CLI.
 3. Reuse the existing read-only workflow after materialization.
-4. Add checksum-based cache invalidation.
+4. Add schema fingerprints and catalog reports to the manifest.
 5. Test one unknown Parquet schema end to end.
 
 Do not add live PostgreSQL before this path is reproducible. The project becomes more useful first by
