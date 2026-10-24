@@ -22,9 +22,7 @@ def test_join_hints_are_validated_against_live_schema() -> None:
     enrichment = SchemaEnrichment(
         version=1,
         reviewed=False,
-        tables=(
-            {"schema_name": "main", "name": "orders", "description": "Orders."},
-        ),
+        tables=({"schema_name": "main", "name": "orders", "description": "Orders."},),
         join_hints=(
             JoinHint(
                 left_schema="main",
