@@ -136,7 +136,7 @@ function App() {
             result={result}
           />
         )}
-        {view === "catalog" && <CatalogView catalog={catalog} profile={profile} enrichment={enrichment} onUseExample={useExample} examples={examples} />}
+        {view === "catalog" && <CatalogView catalog={catalog} profile={profile} enrichment={enrichment} dataset={activeDataset} onUseExample={useExample} examples={examples} />}
         {view === "history" && <HistoryView history={history} demoHistory={demoHistory} recommendations={recommendations} onSelect={setResult} onRunExample={runExample} />}
       </main>
     </div>
