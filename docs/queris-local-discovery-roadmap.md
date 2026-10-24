@@ -100,7 +100,7 @@ the business database.
 
 - [x] Build a bounded discovery prompt from schema, profiles, relationships, and safe samples.
 - [x] Generate table descriptions, column meanings, aliases, units, and business terms.
-- [ ] Generate ambiguity notes and candidate join explanations.
+- [x] Generate candidate join hints and keep them subject to live-schema validation.
 - [x] Generate a versioned enrichment draft with source evidence references.
 - [x] Require human approval before activating semantic metadata.
 - [x] Reject stale references and preserve the previous approved catalog on failure.

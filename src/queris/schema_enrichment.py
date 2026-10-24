@@ -73,6 +73,20 @@ class TableEnrichment(SemanticMetadata):
         return self
 
 
+class JoinHint(BaseModel):
+    """Human-readable candidate join proposed from reviewed schema context."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    left_schema: CleanString
+    left_table: CleanString
+    left_column: CleanString
+    right_schema: CleanString
+    right_table: CleanString
+    right_column: CleanString
+    rationale: CleanString
+
+
 class SchemaEnrichment(BaseModel):
     """Versioned schema-enrichment document ready for explicit review."""
 
@@ -81,6 +95,7 @@ class SchemaEnrichment(BaseModel):
     version: Literal[1]
     reviewed: StrictBool
     tables: tuple[TableEnrichment, ...]
+    join_hints: tuple[JoinHint, ...] = ()
 
     @field_validator("version", mode="before")
     @classmethod
@@ -177,6 +192,30 @@ def validate_schema_enrichment(
             for column in table_metadata.columns
             if column.name not in column_names
         )
+
+    for join in enrichment.join_hints:
+        for schema_name, table_name, column_name in (
+            (join.left_schema, join.left_table, join.left_column),
+            (join.right_schema, join.right_table, join.right_column),
+        ):
+            table = tables_by_reference.get((schema_name, table_name))
+            if table is None:
+                issues.append(
+                    EnrichmentReferenceIssue(
+                        code="unknown_table",
+                        schema_name=schema_name,
+                        table_name=table_name,
+                    )
+                )
+            elif column_name not in {column.name for column in table.columns}:
+                issues.append(
+                    EnrichmentReferenceIssue(
+                        code="unknown_column",
+                        schema_name=schema_name,
+                        table_name=table_name,
+                        column_name=column_name,
+                    )
+                )
 
     return EnrichmentValidation(issues=tuple(issues))
 
