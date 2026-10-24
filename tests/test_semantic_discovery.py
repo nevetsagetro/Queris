@@ -2,6 +2,7 @@ from queris.catalog_profile import CatalogProfile
 from queris.schema import ColumnSchema, DatabaseSchema, TableSchema
 from queris.semantic_discovery import (
     build_enrichment_prompt,
+    cached_enrichment,
     generate_enrichment,
     parse_enrichment_response,
 )
@@ -84,3 +85,29 @@ tables:
 
     assert enrichment.reviewed is False
     assert "order_id" in generator.prompt
+
+
+def test_cached_enrichment_reuses_prompt_result(tmp_path) -> None:
+    class CountingGenerator:
+        calls = 0
+
+        def generate(self, _prompt: str) -> str:
+            self.calls += 1
+            return """version: 1
+reviewed: false
+tables:
+  - schema_name: main
+    name: orders
+    description: Customer orders.
+    columns:
+      - name: order_id
+        description: Order identifier.
+"""
+
+    generator = CountingGenerator()
+    profile = CatalogProfile(source="read_only_profile", tables=(), relationships=())
+    first = cached_enrichment(_schema(), profile, generator, tmp_path / "enrichment.yaml")
+    second = cached_enrichment(_schema(), profile, generator, tmp_path / "enrichment.yaml")
+
+    assert first == second
+    assert generator.calls == 1

@@ -104,7 +104,7 @@ the business database.
 - [x] Generate a versioned enrichment draft with source evidence references.
 - [x] Require human approval before activating semantic metadata.
 - [ ] Reject stale references and preserve the previous approved catalog on failure.
-- [ ] Cache enrichment by snapshot checksum and prompt version.
+- [x] Cache enrichment by the bounded discovery prompt hash, which changes with the schema context.
 
 **Exit criteria:** a new snapshot can produce a useful reviewable catalog without exposing credentials,
 unbounded rows, or arbitrary database tools to the LLM.
@@ -151,7 +151,7 @@ SQL and sources, and reproduce the result locally without repeating LLM work.
 - [ ] Reuse approved enrichment when references remain valid.
 - [ ] Regenerate only impacted starters and charts.
 - [ ] Report LLM calls, cache hits, execution time, and materialization cost locally.
-- [ ] Add a dry-run refresh plan before writing any new artifact.
+- [x] Add a dry-run refresh plan before writing any new artifact.
 
 **Exit criteria:** refreshing an unchanged source performs no unnecessary LLM generation, and schema
 changes produce an auditable impact report.

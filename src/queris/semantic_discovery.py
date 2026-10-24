@@ -1,6 +1,7 @@
 """Bounded LLM assistance for reviewed semantic database discovery."""
 
 import argparse
+import hashlib
 import os
 import re
 from pathlib import Path
@@ -99,6 +100,25 @@ def generate_enrichment(
 ) -> SchemaEnrichment:
     """Generate an inactive semantic catalog from bounded discovery context."""
     return parse_enrichment_response(generator.generate(build_enrichment_prompt(schema, profile)))
+
+
+def cached_enrichment(
+    schema: DatabaseSchema,
+    profile: CatalogProfile,
+    generator: EnrichmentGenerator,
+    cache_path: str | Path,
+) -> SchemaEnrichment:
+    """Reuse semantic enrichment until the bounded discovery prompt changes."""
+    prompt = build_enrichment_prompt(schema, profile)
+    key = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+    path = Path(cache_path)
+    cached = path.with_name(f"{path.stem}.{key}.yaml")
+    if cached.is_file():
+        return SchemaEnrichment.model_validate(yaml.safe_load(cached.read_text(encoding="utf-8")))
+    enrichment = parse_enrichment_response(generator.generate(prompt))
+    cached.parent.mkdir(parents=True, exist_ok=True)
+    cached.write_text(dump_schema_enrichment(enrichment), encoding="utf-8")
+    return enrichment
 
 
 def enrich_database(
