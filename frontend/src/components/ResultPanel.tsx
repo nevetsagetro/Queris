@@ -4,7 +4,8 @@ import { QueryResult } from "../types";
 export function ResultPanel({ result }: { result: QueryResult }) {
   const [showLightChart, setShowLightChart] = useState(false);
   const chartConfidence = result.chart_recommendation?.confidence ?? 0;
-  const chartReady = result.status === "success" && chartConfidence >= 0.9 && result.chart_recommendation?.chart !== "table";
+  const chartAvailable = result.status === "success" && result.chart_recommendation?.chart !== "table";
+  const chartReady = chartAvailable && chartConfidence >= 0.9;
   useEffect(() => setShowLightChart(false), [result.question, result.sql]);
   const message = result.status === "success" ? "Analysis complete" : result.explanation ?? result.clarification ?? result.no_answer ?? result.error ?? "No answer returned.";
   return (
@@ -18,7 +19,7 @@ export function ResultPanel({ result }: { result: QueryResult }) {
       </div>
       {result.status === "success" && (
         <>
-          {result.chart_recommendation && <div className="chart-recommendation"><div><p className="eyebrow">Recommended view</p><strong>{result.chart_recommendation.chart} chart</strong><span>{result.chart_recommendation.reason}</span></div><div className="chart-recommendation-action"><b>{Math.round(result.chart_recommendation.confidence * 100)}% confidence</b>{chartReady && <button type="button" className="secondary-button" onClick={() => setShowLightChart((visible) => !visible)}>{showLightChart ? "Hide chart" : "View chart"}</button>}</div></div>}
+          {result.chart_recommendation && <div className="chart-recommendation"><div><p className="eyebrow">{chartReady ? "Recommended view" : "Possible view"}</p><strong>{result.chart_recommendation.chart} chart</strong><span>{result.chart_recommendation.reason}</span></div><div className="chart-recommendation-action"><b>{Math.round(result.chart_recommendation.confidence * 100)}% confidence</b>{chartAvailable && <button type="button" className="secondary-button" onClick={() => setShowLightChart((visible) => !visible)}>{showLightChart ? "Hide chart" : chartReady ? "View chart" : "Preview chart"}</button>}{chartAvailable && !chartReady && <small className="chart-confidence-note">Preview only · below 90%</small>}</div></div>}
           {result.similar_questions.length > 0 && <div className="language-panel"><p className="eyebrow">Language analysis</p><strong>Related validated patterns</strong>{result.similar_questions.slice(0, 3).map((item) => <span key={item.demo_id}>{Math.round(item.similarity * 100)}% · {item.question}</span>)}</div>}
           <div className="result-section"><p className="eyebrow">Results · Resultado</p><div className="result-table"><div className="column-row column-header">{result.columns.map((column) => <span key={column}>{column}</span>)}</div>{result.rows.slice(0, 100).map((row, index) => <div className="column-row" key={index}>{row.map((value, cell) => <span key={cell}>{String(value)}</span>)}</div>)}</div>
           {showLightChart && <ResultChart result={result} />}</div>
