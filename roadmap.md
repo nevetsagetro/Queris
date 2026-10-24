@@ -7,14 +7,16 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Product workflow, multi-dataset discovery, and agentic generalization (`[~]`)
+- **Product direction:** local, safe database discovery and natural-language SQL over reproducible
+  snapshots; see [`docs/queris-local-discovery-roadmap.md`](docs/queris-local-discovery-roadmap.md).
 - **Latest checkpoint:** modular React/API workspace plus a repeatable read-only dataset registration
   workflow with provenance manifests, enrichment drafts, catalog relationships, and 50 validated
   starters per dataset (2026-10-24).
 - **Completed work:** completed and merged Phases 0–9, including the safe agent, evaluation harness, demo, API, container, CI gates, structured logging, and multi-dataset registration workflow.
-- **Pending next:** add held-out generalization cases for Chinook, Palmer Penguins, and a newly
-  registered unknown schema.
-- **Resume point:** run the dataset-switch and held-out generalization smoke evaluations against
-  the workflow reports for all demo families.
+- **Pending next:** start the local discovery product track with the workspace manifest and Parquet/CSV
+  snapshot importers described in Wave 0 and Wave 1.
+- **Resume point:** implement the first snapshot importer, then run the complete discovery and query
+  intelligence workflow against one unknown schema.
 - **Last updated:** 2026-10-24
 
 ---
