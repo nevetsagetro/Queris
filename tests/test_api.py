@@ -145,6 +145,29 @@ async def test_demo_query_uses_prepared_sql_without_generator(
 
 
 @pytest.mark.anyio
+async def test_stale_generic_demo_id_cannot_execute_the_wrong_question(
+    sample_database: Path,
+) -> None:
+    def generator_factory() -> StaticGenerator:
+        return StaticGenerator("SELECT COUNT(*) AS order_count FROM orders")
+
+    app = create_app(database_path=sample_database, generator_factory=generator_factory)
+    async with api_client(app) as client:
+        response = await client.post(
+            "/query",
+            json={
+                "question": "What was total revenue for orders above the median order value?",
+                "demo_id": "table-count:penguins",
+            },
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["execution_mode"] == "llm"
+    assert payload["sql"] == "SELECT COUNT(*) AS order_count FROM orders"
+
+
+@pytest.mark.anyio
 async def test_query_returns_typed_safe_agent_result(
     sample_database: Path,
     caplog: pytest.LogCaptureFixture,

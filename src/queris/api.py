@@ -359,11 +359,19 @@ def create_app(
         cached = cached_result(query_cache, active_database, request.question)
         cache_hit = cached is not None
         prepared_demo = demo_definition(request.demo_id) if request.demo_id else None
+        if prepared_demo is not None and not _questions_match(
+            request.question, prepared_demo.example.question
+        ):
+            prepared_demo = None
         similar_questions = find_similar_questions(request.question)
         try:
             generic_recommendation = (
                 _generic_recommendation(request.demo_id) if request.demo_id else None
             )
+            if generic_recommendation is not None and not _questions_match(
+                request.question, f"How many rows are in {generic_recommendation}?"
+            ):
+                generic_recommendation = None
             if cached is not None:
                 result = cached
                 execution_mode = "cache"
@@ -430,6 +438,11 @@ def _generic_recommendation(demo_id: str | None) -> str | None:
         return None
     table_name = demo_id.removeprefix("table-count:")
     return table_name if table_name and ":" not in table_name else None
+
+
+def _questions_match(left: str, right: str) -> bool:
+    """Accept harmless whitespace/case changes, but reject stale demo contexts."""
+    return " ".join(left.casefold().split()) == " ".join(right.casefold().split())
 
 
 app = create_app()

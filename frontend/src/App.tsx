@@ -88,6 +88,7 @@ function App() {
       setEnrichment(loadedEnrichment);
       setRecommendations(loadedRecommendations);
       setResult(null);
+      setSelectedDemoId(null);
       setHistory([]);
       window.localStorage.removeItem("queris.history");
     } catch (reason) {
