@@ -37,9 +37,7 @@ def export_workspace(
     if destination.exists() and not force:
         raise FileExistsError(f"export already exists: {destination}")
     manifest = load_workspace_manifest(root)
-    snapshot = next(
-        (item for item in manifest.snapshots if item.dataset_id == dataset_id), None
-    )
+    snapshot = next((item for item in manifest.snapshots if item.dataset_id == dataset_id), None)
     if snapshot is None:
         raise ValueError(f"dataset is not registered in the workspace: {dataset_id}")
     candidates = [
