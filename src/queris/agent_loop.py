@@ -158,60 +158,74 @@ def run_agent_loop(
     question_resolver: QuestionResolver | None = None,
     progress_callback: Callable[[str], None] | None = None,
     schema_override: DatabaseSchema | None = None,
+    adapter: Any | None = None,
 ) -> AgentQueryResult:
-    """Run generate, validate, and execute with a bounded correction loop."""
+    """Run generate, validate, and execute with a bounded correction loop.
+
+    ``adapter`` is an optional read-only database boundary for live engines.
+    The default remains the local DuckDB snapshot path.
+    """
     normalized_question = _normalize_question(question)
     _validate_max_retries(max_retries)
     started_at = perf_counter()
     _report_progress(progress_callback, "Sending question to Queris...")
 
-    with read_only_connection(database_path) as connection:
+    if adapter is not None:
         if schema_override is None:
-            _report_progress(progress_callback, "Analyzing database schema...")
-            schema = introspect_schema(connection, sample_limit=sample_limit)
+            _report_progress(progress_callback, "Analyzing live database schema...")
+            schema = adapter.introspect(sample_limit=sample_limit)
         else:
             _report_progress(progress_callback, "Using cached schema catalog...")
             schema = schema_override
-        _report_progress(progress_callback, "Checking whether the question is answerable...")
-        resolution = (
-            question_resolver.resolve(schema, normalized_question) if question_resolver else None
+        state, assumption = _run_graph(
+            schema,
+            normalized_question,
+            generator,
+            schema_selector,
+            lambda sql: _adapter_result(adapter.execute(sql)),
+            question_resolver,
+            max_retries,
+            progress_callback,
+            execution_label="live read-only adapter",
         )
-        if resolution is not None and resolution.kind == "clarification":
-            return AgentQueryResult(
-                status="clarification",
-                question=normalized_question,
-                sql=None,
-                retry_count=0,
-                latency_ms=_elapsed_ms(started_at),
-                clarification=resolution.message,
+    else:
+        with read_only_connection(database_path) as connection:
+            if schema_override is None:
+                _report_progress(progress_callback, "Analyzing database schema...")
+                schema = introspect_schema(connection, sample_limit=sample_limit)
+            else:
+                _report_progress(progress_callback, "Using cached schema catalog...")
+                schema = schema_override
+            state, assumption = _run_graph(
+                schema,
+                normalized_question,
+                generator,
+                schema_selector,
+                lambda sql: _duckdb_result(connection, sql),
+                question_resolver,
+                max_retries,
+                progress_callback,
+                execution_label="DuckDB (read-only)",
             )
-        if resolution is not None and resolution.kind == "no_answer":
-            return AgentQueryResult(
-                status="no_answer",
-                question=normalized_question,
-                sql=None,
-                retry_count=0,
-                latency_ms=_elapsed_ms(started_at),
-                no_answer=resolution.message,
-            )
-        assumption = resolution.message if resolution is not None else None
-        graph = _build_graph(connection, generator, schema_selector, progress_callback)
-        state = graph.invoke(
-            {
-                "question": normalized_question,
-                "schema": schema,
-                "correction": None,
-                "retry_count": 0,
-                "max_retries": max_retries,
-            },
-            config={
-                "recursion_limit": max(
-                    25,
-                    (max_retries + 1) * _GRAPH_STEPS_PER_ATTEMPT,
-                )
-            },
-        )
 
+    if state["status"] == "clarification":
+        return AgentQueryResult(
+            status="clarification",
+            question=normalized_question,
+            sql=None,
+            retry_count=0,
+            latency_ms=_elapsed_ms(started_at),
+            clarification=state.get("clarification"),
+        )
+    if state["status"] == "no_answer":
+        return AgentQueryResult(
+            status="no_answer",
+            question=normalized_question,
+            sql=None,
+            retry_count=0,
+            latency_ms=_elapsed_ms(started_at),
+            no_answer=state.get("no_answer"),
+        )
     failed = state["status"] == "failure"
     sources = extract_query_sources(state["sql"], schema) if not failed else ()
     return AgentQueryResult(
@@ -232,10 +246,11 @@ def run_agent_loop(
 
 
 def _build_graph(
-    connection: duckdb.DuckDBPyConnection,
+    execute_query: Callable[[str], tuple[tuple[str, ...], tuple[tuple[Any, ...], ...]]],
     generator: CorrectingSQLGenerator,
     schema_selector: SchemaSelector,
     progress_callback: Callable[[str], None] | None = None,
+    execution_label: str = "DuckDB (read-only)",
 ) -> CompiledStateGraph[_AgentState, None, _AgentState, _AgentState]:
     def generate(state: _AgentState) -> dict[str, object]:
         _report_progress(progress_callback, "Selecting relevant tables and generating SQL...")
@@ -264,16 +279,16 @@ def _build_graph(
         return {}
 
     def execute(state: _AgentState) -> dict[str, object]:
-        _report_progress(progress_callback, "Executing validated SQL on DuckDB (read-only)...")
+        _report_progress(progress_callback, f"Executing validated SQL on {execution_label}...")
         try:
-            cursor = execute_read_only(connection, state["sql"])
+            columns, rows = execute_query(state["sql"])
         except SQLValidationError as error:
             return {
                 "status": "failure",
                 "failure_stage": "validation",
                 "error": str(error),
             }
-        except duckdb.Error as error:
+        except Exception as error:
             return {
                 "status": "failure",
                 "failure_stage": "execution",
@@ -281,8 +296,8 @@ def _build_graph(
             }
         return {
             "status": "success",
-            "columns": tuple(description[0] for description in cursor.description or ()),
-            "rows": tuple(tuple(row) for row in cursor.fetchall()),
+            "columns": columns,
+            "rows": rows,
         }
 
     def prepare_correction(state: _AgentState) -> dict[str, object]:
@@ -327,6 +342,67 @@ def _build_graph(
     )
     graph.add_edge("prepare_correction", "generate")
     return graph.compile()
+
+
+def _run_graph(
+    schema: DatabaseSchema,
+    question: str,
+    generator: CorrectingSQLGenerator,
+    schema_selector: SchemaSelector,
+    execute_query: Callable[[str], tuple[tuple[str, ...], tuple[tuple[Any, ...], ...]]],
+    question_resolver: QuestionResolver | None,
+    max_retries: int,
+    progress_callback: Callable[[str], None] | None,
+    execution_label: str,
+) -> tuple[dict[str, Any], str | None]:
+    """Resolve and invoke the shared graph for any read-only execution boundary."""
+    _report_progress(progress_callback, "Checking whether the question is answerable...")
+    resolution = question_resolver.resolve(schema, question) if question_resolver else None
+    if resolution is not None and resolution.kind == "clarification":
+        return {
+            "status": "clarification",
+            "question": question,
+            "sql": None,
+            "retry_count": 0,
+            "latency_ms": 0,
+            "clarification": resolution.message,
+        }, None
+    if resolution is not None and resolution.kind == "no_answer":
+        return {
+            "status": "no_answer",
+            "question": question,
+            "sql": None,
+            "retry_count": 0,
+            "latency_ms": 0,
+            "no_answer": resolution.message,
+        }, None
+    graph = _build_graph(
+        execute_query, generator, schema_selector, progress_callback, execution_label
+    )
+    return graph.invoke(
+        {
+            "question": question,
+            "schema": schema,
+            "correction": None,
+            "retry_count": 0,
+            "max_retries": max_retries,
+        },
+        config={"recursion_limit": max(25, (max_retries + 1) * _GRAPH_STEPS_PER_ATTEMPT)},
+    ), resolution.message if resolution is not None else None
+
+
+def _duckdb_result(
+    connection: duckdb.DuckDBPyConnection, sql: str
+) -> tuple[tuple[str, ...], tuple[tuple[Any, ...], ...]]:
+    cursor = execute_read_only(connection, sql)
+    return tuple(description[0] for description in cursor.description or ()), tuple(
+        tuple(row) for row in cursor.fetchall()
+    )
+
+
+def _adapter_result(result: Any) -> tuple[tuple[str, ...], tuple[tuple[Any, ...], ...]]:
+    """Normalize the adapter's bounded result into the graph's internal shape."""
+    return result.columns, result.rows
 
 
 def _normalize_question(question: str) -> str:

@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
-import { loadDiscovery, queryData, replayQuery, selectDataset } from "./api/client";
-import { Catalog, CatalogProfile, DatasetInfo, DemoHistoryItem, EnrichmentStatus, Example, MetricsSummary, QueryResult, RecommendedRun, View } from "./types";
+import { fetchRuntime, loadDiscovery, queryData, replayQuery, selectDataset } from "./api/client";
+import { Catalog, CatalogProfile, DatasetInfo, DemoHistoryItem, EnrichmentStatus, Example, MetricsSummary, QueryResult, RecommendedRun, RuntimeInfo, View } from "./types";
 import { AskView } from "./components/AskView";
 import { CatalogView } from "./components/CatalogView";
 import { HistoryView } from "./components/HistoryView";
@@ -24,6 +24,7 @@ function App() {
   const [enrichment, setEnrichment] = useState<EnrichmentStatus | null>(null);
   const [recommendations, setRecommendations] = useState<RecommendedRun[]>([]);
   const [metrics, setMetrics] = useState<MetricsSummary | null>(null);
+  const [runtime, setRuntime] = useState<RuntimeInfo | null>(null);
   const [result, setResult] = useState<QueryResult | null>(null);
   const [history, setHistory] = useState<QueryResult[]>(() => readHistory());
   const [busy, setBusy] = useState(false);
@@ -33,6 +34,7 @@ function App() {
   const datasetAvailable = activeDataset !== null;
 
   useEffect(() => {
+    void fetchRuntime().then(setRuntime).catch(() => setRuntime(null));
     void loadDiscovery()
       .then(([loadedExamples, loadedCatalog, loadedDemoHistory, loadedDatasets, loadedProfile, loadedEnrichment, loadedRecommendations, loadedMetrics]) => {
         setExamples(loadedExamples);
@@ -135,6 +137,7 @@ function App() {
           <label className="dataset-select"><span className="sr-only">Active public dataset</span><select aria-label="Active public dataset" value={activeDataset?.id ?? ""} onChange={(event) => void changeDataset(event.target.value)} disabled={!publicDatasets.length}><option value="">No public dataset</option>{publicDatasets.map((dataset) => <option value={dataset.id} key={dataset.id}>{dataset.name}</option>)}</select></label>
           {activeDataset?.source_url && <a className="source-link" href={activeDataset.source_url} target="_blank" rel="noreferrer" aria-label={`Verify ${activeDataset.name} source`} title="Open original dataset source">Verify source <span aria-hidden="true">↗</span></a>}
         </div>
+        {runtime && <span className="runtime-badge" title="Execution boundary"><span aria-hidden="true">●</span> {runtime.mode} · {runtime.engine}</span>}
       </header>
 
       <main className="main-content">

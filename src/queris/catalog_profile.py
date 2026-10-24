@@ -81,6 +81,49 @@ def profile_database(
     )
 
 
+def profile_adapter(
+    adapter: Any, *, max_tables: int = 200, max_columns_per_table: int = 200
+) -> CatalogProfile:
+    """Build the same bounded profile through a read-only live adapter."""
+    schema = adapter.introspect(sample_limit=0)
+    if len(schema.tables) > max_tables:
+        raise ValueError(f"database exceeds the {max_tables}-table profile limit")
+    if any(len(table.columns) > max_columns_per_table for table in schema.tables):
+        raise ValueError(f"a table exceeds the {max_columns_per_table}-column profile limit")
+    profiles: list[TableProfile] = []
+    for table in schema.tables:
+        qualified = _qualified(table.schema_name, table.name)
+        row_count = int(adapter.execute(f"SELECT COUNT(*) FROM {qualified}").rows[0][0])
+        columns: list[ColumnProfile] = []
+        for column in table.columns:
+            escaped = column.name.replace('"', '""')
+            stats = adapter.execute(
+                f'SELECT COUNT(*) FILTER (WHERE "{escaped}" IS NULL), '
+                f'COUNT(DISTINCT "{escaped}"), MIN("{escaped}"), MAX("{escaped}") '
+                f"FROM {qualified}"
+            ).rows[0]
+            columns.append(
+                ColumnProfile(
+                    name=column.name,
+                    data_type=column.data_type,
+                    row_count=row_count,
+                    null_count=int(stats[0]),
+                    distinct_count=int(stats[1]),
+                    min_value=stats[2],
+                    max_value=stats[3],
+                )
+            )
+        profiles.append(
+            TableProfile(
+                schema_name=table.schema_name,
+                name=table.name,
+                row_count=row_count,
+                columns=tuple(columns),
+            )
+        )
+    return CatalogProfile(source="read_only_profile", tables=tuple(profiles), relationships=())
+
+
 def _profile_table(connection: Any, table: Any) -> TableProfile:
     qualified = _qualified(table.schema_name, table.name)
     row_count = int(connection.execute(f"SELECT COUNT(*) FROM {qualified}").fetchone()[0])

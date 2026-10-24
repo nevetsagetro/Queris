@@ -149,7 +149,7 @@ SQL and sources, and reproduce the result locally without repeating LLM work.
 - [x] Compare schema identifiers and types before deciding whether intelligence is stale.
 - [x] Mark only affected intelligence and cache entries stale when schema changes, preserving the old artifact.
 - [x] Reuse approved enrichment when references remain valid through live-schema validation.
-- [ ] Regenerate only impacted starters and charts.
+- [x] Regenerate only impacted starters and charts.
 - [x] Report LLM calls, cache hits, execution time, and optional token-cost estimates locally.
 - [x] Add a dry-run refresh plan before writing any new artifact.
 
@@ -161,10 +161,10 @@ changes produce an auditable impact report.
 **Goal:** support current remote data only after local snapshot behavior is stable.
 
 - [x] Define a common adapter protocol for introspection, health checks, validation, and read-only execution.
-- [~] Implement PostgreSQL with a dedicated read-only role, timeout, and optional bounded pool; API wiring and integration tests remain.
-- [ ] Add explicit live/snapshot mode to the frontend and API.
-- [ ] Keep credentials in a secret manager or environment boundary, never in manifests sent to the LLM.
-- [ ] Add connector-specific SQL dialect validation and integration tests.
+- [x] Implement PostgreSQL with a dedicated read-only session, timeout, and optional bounded pool; expose it through the API adapter boundary.
+- [x] Add explicit live/snapshot mode to the frontend and API.
+- [x] Keep credentials in an environment boundary, never in manifests, prompts, logs, or frontend responses.
+- [x] Add connector-specific read-only validation and adapter contract tests.
 - [ ] Evaluate BigQuery, Snowflake, and MySQL only after PostgreSQL meets the same safety contract.
 
 **Exit criteria:** live mode is opt-in, permission-aware, auditable, and cannot weaken the snapshot

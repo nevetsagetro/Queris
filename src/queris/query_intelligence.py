@@ -119,7 +119,10 @@ def selectively_refresh_query_intelligence(
     """
     database_path = Path(database)
     output_path = Path(output)
-    previous_items = [ValidatedQuery.model_validate(item) for item in json.loads(Path(previous).read_text(encoding="utf-8"))]
+    previous_items = [
+        ValidatedQuery.model_validate(item)
+        for item in json.loads(Path(previous).read_text(encoding="utf-8"))
+    ]
     previous_by_id = {item.id: item for item in previous_items}
     with read_only_connection(database_path) as connection:
         schema = introspect_schema(connection, sample_limit=0)

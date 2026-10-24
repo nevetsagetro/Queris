@@ -4,6 +4,7 @@ import duckdb
 import pytest
 
 import queris.agent_loop as agent_loop
+from queris.adapters import DuckDBAdapter
 from queris.agent_loop import (
     DEFAULT_MAX_RETRIES,
     MAX_RETRIES,
@@ -39,6 +40,19 @@ class FakeResolver:
     def resolve(self, schema: DatabaseSchema, question: str) -> QuestionResolution:
         self.calls.append((schema, question))
         return self.resolution
+
+
+def test_agent_loop_can_execute_through_the_adapter_boundary(sample_database: Path) -> None:
+    result = run_agent_loop(
+        sample_database,
+        "How many orders are there?",
+        FakeGenerator("SELECT COUNT(*) FROM orders"),
+        FullSchemaSelector(),
+        adapter=DuckDBAdapter(str(sample_database)),
+    )
+
+    assert result.status == "success"
+    assert result.rows == ((4,),)
 
 
 def test_agent_loop_returns_typed_success(sample_database: Path) -> None:

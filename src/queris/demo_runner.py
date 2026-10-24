@@ -3,6 +3,7 @@
 from pathlib import Path
 from time import perf_counter
 
+from queris.adapters import DatabaseAdapter
 from queris.agent_loop import AgentQueryResult
 from queris.database import execute_read_only, read_only_connection
 from queris.demo_registry import DemoDefinition, get_demo_definition
@@ -50,6 +51,23 @@ def run_prepared_query(database_path: str | Path, question: str, sql: str) -> Ag
         sql=sql,
         columns=columns,
         rows=rows,
+        sources=extract_query_sources(sql, schema),
+        retry_count=0,
+        latency_ms=(perf_counter() - started_at) * 1000,
+    )
+
+
+def run_adapter_query(adapter: DatabaseAdapter, question: str, sql: str) -> AgentQueryResult:
+    """Execute a previously validated query through a live read-only adapter."""
+    started_at = perf_counter()
+    schema = adapter.introspect(sample_limit=0)
+    result = adapter.execute(sql)
+    return AgentQueryResult(
+        status="success",
+        question=question,
+        sql=sql,
+        columns=result.columns,
+        rows=result.rows,
         sources=extract_query_sources(sql, schema),
         retry_count=0,
         latency_ms=(perf_counter() - started_at) * 1000,

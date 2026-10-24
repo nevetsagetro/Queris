@@ -7,8 +7,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from queris.schema import DatabaseSchema
 from queris.query_intelligence import selectively_refresh_query_intelligence
+from queris.schema import DatabaseSchema
 from queris.snapshot import SnapshotManifest, import_snapshot, load_workspace_manifest
 from queris.workspace_discovery import discover_snapshot
 

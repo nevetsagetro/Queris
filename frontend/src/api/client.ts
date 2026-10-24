@@ -1,4 +1,4 @@
-import { Catalog, CatalogProfile, DatasetInfo, DemoHistoryItem, EnrichmentStatus, Example, MetricsSummary, QueryResult, RecommendedRun } from "../types";
+import { Catalog, CatalogProfile, DatasetInfo, DemoHistoryItem, EnrichmentStatus, Example, MetricsSummary, QueryResult, RecommendedRun, RuntimeInfo } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8001";
 
@@ -6,6 +6,10 @@ export async function fetchJson<T>(path: string, options?: RequestInit): Promise
   const response = await fetch(`${API_BASE}${path}`, options);
   if (!response.ok) throw new Error(`API request failed (${response.status})`);
   return response.json() as Promise<T>;
+}
+
+export function fetchRuntime(): Promise<RuntimeInfo> {
+  return fetchJson<RuntimeInfo>("/runtime");
 }
 
 export function loadDiscovery(): Promise<[Example[], Catalog, DemoHistoryItem[], DatasetInfo[], CatalogProfile, EnrichmentStatus, RecommendedRun[], MetricsSummary]> {

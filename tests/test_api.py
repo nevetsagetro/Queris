@@ -56,6 +56,20 @@ async def test_health_reports_database_readiness(sample_database: Path) -> None:
 
 
 @pytest.mark.anyio
+async def test_runtime_reports_explicit_read_only_snapshot_mode(sample_database: Path) -> None:
+    async with api_client(create_app(database_path=sample_database)) as client:
+        response = await client.get("/runtime")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "mode": "snapshot",
+        "engine": "duckdb",
+        "read_only": True,
+        "adapter_available": True,
+    }
+
+
+@pytest.mark.anyio
 async def test_catalog_and_examples_are_discoverable(sample_database: Path) -> None:
     async with api_client(create_app(database_path=sample_database)) as client:
         catalog = await client.get("/catalog")

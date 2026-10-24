@@ -93,6 +93,13 @@ export type MetricsSummary = {
   estimated_cost_usd: string | null;
 };
 
+export type RuntimeInfo = {
+  mode: "snapshot" | "live";
+  engine: string;
+  read_only: true;
+  adapter_available: boolean;
+};
+
 export type RecommendedRun = {
   id: string;
   demo_id: string;

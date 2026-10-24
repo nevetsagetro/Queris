@@ -14,15 +14,21 @@ from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, StringConstraints
 
+from queris.adapters import PostgresAdapter
 from queris.agent_loop import AgentQueryResult, CorrectingSQLGenerator, run_agent_loop
 from queris.catalog_enrichment import EnrichmentStatus, enrich_schema
-from queris.catalog_profile import CatalogProfile, profile_database
+from queris.catalog_profile import CatalogProfile, profile_adapter, profile_database
 from queris.chart_recommender import ChartRecommendation, recommend_chart
 from queris.dataset_demos import get_dataset_demo, get_dataset_demos
 from queris.datasets import DatasetInfo, discover_datasets, select_dataset
 from queris.demo_cache import cache_result, cached_result, load_schema_catalog
 from queris.demo_examples import DemoExample, DemoHistoryItem, get_demo_examples, get_demo_history
-from queris.demo_runner import demo_definition, run_demo_query, run_prepared_query
+from queris.demo_runner import (
+    demo_definition,
+    run_adapter_query,
+    run_demo_query,
+    run_prepared_query,
+)
 from queris.generation import GeminiSQLGenerator, SQLGenerationError
 from queris.language_similarity import (
     QuestionIntent,
@@ -44,6 +50,7 @@ LOGGER = logging.getLogger("queris.api")
 LOGGED_ROUTES = frozenset(
     {
         "/health",
+        "/runtime",
         "/datasets",
         "/datasets/select",
         "/catalog",
@@ -83,6 +90,17 @@ class HealthResponse(BaseModel):
 
     status: Literal["ok", "degraded"]
     database_available: bool
+
+
+class RuntimeResponse(BaseModel):
+    """Explicit execution boundary exposed to clients without secrets."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    mode: Literal["snapshot", "live"]
+    engine: str
+    read_only: Literal[True] = True
+    adapter_available: bool
 
 
 class QueryRequest(BaseModel):
@@ -226,6 +244,19 @@ def create_app(
         if os.getenv("QUERIS_WORKSPACE")
         else None
     )
+    runtime_mode = os.getenv("QUERIS_RUNTIME_MODE", "snapshot")
+    if runtime_mode not in {"snapshot", "live"}:
+        raise ValueError("QUERIS_RUNTIME_MODE must be 'snapshot' or 'live'")
+    live_adapter = None
+    if runtime_mode == "live":
+        dsn = os.getenv("QUERIS_POSTGRES_DSN")
+        if not dsn:
+            raise ValueError("QUERIS_POSTGRES_DSN is required when QUERIS_RUNTIME_MODE=live")
+        live_adapter = PostgresAdapter(
+            dsn,
+            statement_timeout_ms=int(os.getenv("QUERIS_STATEMENT_TIMEOUT_MS", "30000")),
+            pool_size=int(os.getenv("QUERIS_POSTGRES_POOL_SIZE", "4")),
+        )
     application = FastAPI(title="Queris API", version="0.1.0")
     application.add_middleware(
         CORSMiddleware,
@@ -240,6 +271,13 @@ def create_app(
     if metrics_path is None and workspace_directory is not None:
         metrics_path = str(workspace_directory / "cache" / "metrics.jsonl")
     metrics_ledger = MetricsLedger(metrics_path)
+
+    def database_available() -> bool:
+        return (
+            live_adapter.healthcheck().available
+            if live_adapter is not None
+            else active_database.is_file()
+        )
 
     @application.middleware("http")
     async def log_request(request: Request, call_next: RequestHandler) -> Response:
@@ -282,10 +320,18 @@ def create_app(
 
     @application.get("/health", response_model=HealthResponse)
     async def health() -> HealthResponse:
-        available = active_database.is_file()
+        available = database_available()
         return HealthResponse(
             status="ok" if available else "degraded",
             database_available=available,
+        )
+
+    @application.get("/runtime", response_model=RuntimeResponse)
+    async def runtime() -> RuntimeResponse:
+        return RuntimeResponse(
+            mode=runtime_mode,
+            engine=live_adapter.engine if live_adapter is not None else "duckdb",
+            adapter_available=database_available(),
         )
 
     @application.get("/datasets", response_model=tuple[DatasetInfo, ...])
@@ -309,12 +355,16 @@ def create_app(
         )
 
     def active_schema_and_enrichment() -> tuple[DatabaseSchema, EnrichmentStatus]:
-        raw_schema = load_schema_catalog(schema_cache, active_database)
+        raw_schema = (
+            live_adapter.introspect(sample_limit=3)
+            if live_adapter is not None
+            else load_schema_catalog(schema_cache, active_database)
+        )
         return enrich_schema(raw_schema, active_database, metadata_directory)
 
     @application.get("/catalog", response_model=CatalogResponse)
     async def catalog() -> CatalogResponse:
-        if not active_database.is_file():
+        if not database_available():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Configured database is unavailable",
@@ -328,7 +378,7 @@ def create_app(
 
     @application.get("/catalog/enrichment", response_model=CatalogEnrichmentResponse)
     async def catalog_enrichment() -> CatalogEnrichmentResponse:
-        if not active_database.is_file():
+        if not database_available():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Configured database is unavailable",
@@ -338,7 +388,7 @@ def create_app(
 
     @application.get("/recommendations", response_model=tuple[RecommendedRun, ...])
     async def recommendations() -> tuple[RecommendedRun, ...]:
-        if not active_database.is_file():
+        if not database_available():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Configured database is unavailable",
@@ -355,7 +405,7 @@ def create_app(
 
     @application.get("/examples", response_model=tuple[DemoExample, ...])
     async def examples() -> tuple[DemoExample, ...]:
-        if not active_database.is_file():
+        if not database_available():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Configured database is unavailable",
@@ -365,7 +415,7 @@ def create_app(
 
     @application.get("/catalog/profile", response_model=CatalogProfile)
     async def catalog_profile() -> CatalogProfile:
-        if not active_database.is_file():
+        if not database_available():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Configured database is unavailable",
@@ -373,12 +423,16 @@ def create_app(
         stat = active_database.stat()
         cache_key = f"{active_database}:{stat.st_mtime_ns}:{stat.st_size}"
         if cache_key not in profile_cache:
-            profile_cache[cache_key] = profile_database(str(active_database))
+            profile_cache[cache_key] = (
+                profile_adapter(live_adapter)
+                if live_adapter is not None
+                else profile_database(str(active_database))
+            )
         return profile_cache[cache_key]
 
     @application.get("/history/demo", response_model=tuple[DemoHistoryItem, ...])
     async def demo_history() -> tuple[DemoHistoryItem, ...]:
-        if not active_database.is_file():
+        if not database_available():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Configured database is unavailable",
@@ -392,7 +446,7 @@ def create_app(
 
     @application.post("/query", response_model=QueryResponse)
     async def query(request: QueryRequest, http_request: Request) -> QueryResponse:
-        if not active_database.is_file():
+        if not database_available():
             http_request.state.query_decision = "unavailable"
             http_request.state.retry_count = 0
             http_request.state.blocked = False
@@ -435,17 +489,17 @@ def create_app(
             if cached is not None:
                 result = cached
                 execution_mode = "cache"
-            elif prepared_demo is not None:
+            elif live_adapter is None and prepared_demo is not None:
                 result = run_demo_query(active_database, prepared_demo)
                 execution_mode = "demo"
-            elif prepared_dataset_demo is not None:
+            elif live_adapter is None and prepared_dataset_demo is not None:
                 result = run_prepared_query(
                     active_database,
                     request.question,
                     prepared_dataset_demo.sql,
                 )
                 execution_mode = "demo"
-            elif generic_recommendation is not None:
+            elif live_adapter is None and generic_recommendation is not None:
                 table_name = generic_recommendation
                 if table_name not in {table.name for table in active_schema.tables}:
                     raise HTTPException(
@@ -467,6 +521,7 @@ def create_app(
                     llm_generator,
                     FullSchemaSelector(),
                     schema_override=active_schema_and_enrichment()[0],
+                    adapter=live_adapter,
                 )
                 execution_mode = "llm"
         except SQLGenerationError as error:
@@ -514,13 +569,17 @@ def create_app(
     @application.post("/query/replay", response_model=QueryResponse)
     async def replay_query(request: ReplayQueryRequest, http_request: Request) -> QueryResponse:
         """Replay saved read-only SQL without constructing or calling an LLM."""
-        if not active_database.is_file():
+        if not database_available():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Configured database is unavailable",
             )
         try:
-            result = run_prepared_query(active_database, request.question, request.sql)
+            result = (
+                run_adapter_query(live_adapter, request.question, request.sql)
+                if live_adapter is not None
+                else run_prepared_query(active_database, request.question, request.sql)
+            )
         except ValueError as error:
             http_request.state.query_decision = "not_executed"
             http_request.state.retry_count = 0
