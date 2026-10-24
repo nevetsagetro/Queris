@@ -88,8 +88,8 @@ snapshot with a manifest and no mutation of the source artifact.
 - [x] Infer probable primary/foreign-key relationships and cardinality.
 - [x] Record discovery runtime, schema fingerprint, and snapshot checksum.
 - [x] Detect schema drift between two snapshots.
-- [~] Expose a machine-readable catalog report and a human-readable summary.
-- [ ] Add performance limits for wide and large databases.
+- [x] Expose a machine-readable catalog report and a human-readable summary.
+- [x] Add profile limits for wide schemas before expensive relationship analysis.
 
 **Exit criteria:** the same snapshot produces the same catalog fingerprint and discovery never writes to
 the business database.

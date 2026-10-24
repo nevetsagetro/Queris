@@ -57,10 +57,21 @@ class CatalogProfile(BaseModel):
     relationships: tuple[RelationshipProfile, ...]
 
 
-def profile_database(database_path: str) -> CatalogProfile:
+def profile_database(
+    database_path: str,
+    *,
+    max_tables: int = 200,
+    max_columns_per_table: int = 200,
+) -> CatalogProfile:
     """Profile tables, columns, and likely relationships in read-only mode."""
+    if max_tables <= 0 or max_columns_per_table <= 0:
+        raise ValueError("profile limits must be positive")
     with read_only_connection(database_path) as connection:
         schema = introspect_schema(connection, sample_limit=0)
+        if len(schema.tables) > max_tables:
+            raise ValueError(f"database exceeds the {max_tables}-table profile limit")
+        if any(len(table.columns) > max_columns_per_table for table in schema.tables):
+            raise ValueError(f"a table exceeds the {max_columns_per_table}-column profile limit")
         table_profiles = tuple(_profile_table(connection, table) for table in schema.tables)
         relationships = _profile_relationships(connection, table_profiles)
     return CatalogProfile(

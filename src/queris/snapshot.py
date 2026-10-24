@@ -299,6 +299,7 @@ def main() -> None:
     discover_parser.add_argument("--workspace", type=Path, default=Path("."))
     discover_parser.add_argument("--dataset-id", required=True)
     discover_parser.add_argument("--samples", type=int, default=3)
+    discover_parser.add_argument("--format", choices=("json", "text"), default="json")
     args = parser.parse_args()
     if args.command == "init":
         print(init_workspace(args.workspace))
@@ -306,13 +307,8 @@ def main() -> None:
     if args.command == "discover":
         from queris.workspace_discovery import discover_snapshot
 
-        print(
-            discover_snapshot(
-                args.workspace,
-                args.dataset_id,
-                sample_limit=args.samples,
-            ).model_dump_json(indent=2)
-        )
+        report = discover_snapshot(args.workspace, args.dataset_id, sample_limit=args.samples)
+        print(report.human_summary() if args.format == "text" else report.model_dump_json(indent=2))
         return
     manifest = import_snapshot(
         args.source,

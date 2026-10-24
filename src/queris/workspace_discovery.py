@@ -28,6 +28,17 @@ class DiscoveryReport(BaseModel):
     schema_path: str
     profile_path: str
 
+    def human_summary(self) -> str:
+        """Render a concise summary suitable for a terminal workflow."""
+        return (
+            f"Dataset: {self.dataset_id}\n"
+            f"Tables: {self.table_count}\n"
+            f"Relationships: {self.relationship_count}\n"
+            f"Schema fingerprint: {self.schema_fingerprint}\n"
+            f"Schema artifact: {self.schema_path}\n"
+            f"Profile artifact: {self.profile_path}"
+        )
+
 
 def discover_snapshot(
     workspace: str | Path,
@@ -100,11 +111,7 @@ def main() -> None:
     parser.add_argument("--workspace", type=Path, default=Path("."))
     parser.add_argument("--dataset-id", required=True)
     parser.add_argument("--samples", type=int, default=3)
+    parser.add_argument("--format", choices=("json", "text"), default="json")
     args = parser.parse_args()
-    print(
-        discover_snapshot(
-            args.workspace,
-            args.dataset_id,
-            sample_limit=args.samples,
-        ).model_dump_json(indent=2)
-    )
+    report = discover_snapshot(args.workspace, args.dataset_id, sample_limit=args.samples)
+    print(report.human_summary() if args.format == "text" else report.model_dump_json(indent=2))
