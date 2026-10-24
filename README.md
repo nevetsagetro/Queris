@@ -2,6 +2,10 @@
 
 **A local, safe, and auditable database-discovery layer for natural-language analytics.**
 
+[![Quality](https://github.com/nevetsagetro/Queris/actions/workflows/quality.yml/badge.svg?branch=main)](https://github.com/nevetsagetro/Queris/actions/workflows/quality.yml)
+[![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
+
 Queris helps a team understand a database before asking it questions. It imports a local snapshot,
 builds a deterministic catalog, enriches it with reviewed semantic metadata, prepares validated
 analysis starters, and converts natural language into read-only SQL.
@@ -53,6 +57,29 @@ intelligence/               validated query starters
 cache/                      enrichment, refresh, invalidation, and metrics artifacts
 ```
 
+## Architecture
+
+```mermaid
+flowchart LR
+    S[Source export or live boundary] --> M[Snapshot manager]
+    M --> D[(Local DuckDB snapshot)]
+    D --> C[Deterministic catalog and profile]
+    C --> E[Reviewed semantic enrichment]
+    E --> I[Validated intelligence and similarity cache]
+    Q[User question] --> UI[React frontend or API]
+    UI --> A[Bounded agent loop]
+    I --> A
+    A --> V[SQL read-only validator]
+    V --> X[Database adapter]
+    X --> D
+    X -. opt-in .-> P[(PostgreSQL live database)]
+    X --> R[Result, chart, history, and metrics]
+    R --> UI
+```
+
+The LLM participates in semantic interpretation and SQL generation only. The adapter remains the
+authority for schema access, SQL validation, read-only execution, and runtime boundaries.
+
 ## Quick start
 
 Requirements: Python 3.11+ and, for the React frontend, Node.js 18+.
@@ -78,6 +105,19 @@ The API is available at `http://127.0.0.1:8000`. Check it with:
 curl http://127.0.0.1:8000/health
 curl http://127.0.0.1:8000/runtime
 ```
+
+### Clone-to-check
+
+The first verification path is credential-independent and does not require a live database or an
+LLM key:
+
+```bash
+python -m pip install -e '.[dev]'
+queris-ci-eval
+```
+
+For the full local suite, run `python -m pytest`. A provider key is only needed for provider-backed
+generation or the live demo evaluation.
 
 ## React frontend
 
