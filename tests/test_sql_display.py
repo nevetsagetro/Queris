@@ -3,7 +3,9 @@ from queris.sql_display import format_sql_for_display
 
 def test_format_sql_for_display_uses_conventional_clause_indentation() -> None:
     formatted = format_sql_for_display(
-        "WITH monthly AS (SELECT DATE_TRUNC('month', order_date) AS month, SUM(revenue) AS revenue FROM orders GROUP BY 1) SELECT month, revenue FROM monthly ORDER BY month"
+        "WITH monthly AS (SELECT DATE_TRUNC('month', order_date) AS month, "
+        "SUM(revenue) AS revenue FROM orders GROUP BY 1) "
+        "SELECT month, revenue FROM monthly ORDER BY month"
     )
 
     assert "WITH monthly AS (" in formatted
