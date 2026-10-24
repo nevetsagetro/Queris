@@ -2,7 +2,9 @@
 
 ### From a database snapshot to trustworthy answers.
 
-[![Quality](https://github.com/nevetsagetro/Queris/actions/workflows/quality.yml/badge.svg?branch=main)](https://github.com/nevetsagetro/Queris/actions/workflows/quality.yml)
+[![Evaluation](https://img.shields.io/badge/evaluation-50%2F50%20passed-2ea44f)](#evidence)
+[![Safety](https://img.shields.io/badge/safety-24%2F24%20blocked-2ea44f)](#evidence)
+[![Adversarial](https://img.shields.io/badge/adversarial-27%2F27%20passed-2ea44f)](#evidence)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
 
