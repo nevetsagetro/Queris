@@ -66,15 +66,17 @@ flowchart LR
     D --> C[Deterministic catalog and profile]
     C --> E[Reviewed semantic enrichment]
     E --> I[Validated intelligence and similarity cache]
-    Q[User question] --> UI[React frontend or API]
-    UI --> A[Bounded agent loop]
+    Q[User question] --> UI[React frontend]
+    UI --> API[FastAPI API]
+    API --> A[Bounded LangGraph agent loop]
     I --> A
     A --> V[SQL read-only validator]
     V --> X[Database adapter]
     X --> D
     X -. opt-in .-> P[(PostgreSQL live database)]
     X --> R[Result, chart, history, and metrics]
-    R --> UI
+    R --> API
+    API --> UI
 ```
 
 The LLM participates in semantic interpretation and SQL generation only. The adapter remains the
@@ -146,6 +148,10 @@ URL to Vite:
 QUERIS_PORT=8002 QUERIS_DATABASE=data/retail.duckdb queris-api
 VITE_API_URL=http://127.0.0.1:8002 npm run dev
 ```
+
+The packaged `queris-demo` Streamlit command remains available for legacy evaluation and
+compatibility workflows. It is not the primary product interface; new frontend work belongs in the
+React application.
 
 ## Snapshot workflow
 
