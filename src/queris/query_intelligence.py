@@ -11,6 +11,7 @@ from queris.chart_recommender import ChartRecommendation, recommend_chart
 from queris.database import execute_read_only, read_only_connection
 from queris.dataset_demos import get_dataset_demos
 from queris.schema import introspect_schema
+from queris.workspace_discovery import schema_fingerprint
 
 
 class ValidatedQuery(BaseModel):
@@ -19,6 +20,7 @@ class ValidatedQuery(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     id: str
+    schema_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
     question: str
     reason: str
     tables: tuple[str, ...]
@@ -37,6 +39,7 @@ class QueryIntelligenceReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     dataset_id: str
+    schema_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
     generated_query_count: int = Field(ge=0)
     validated_query_count: int = Field(ge=0)
     failed_query_ids: tuple[str, ...] = ()
@@ -54,6 +57,7 @@ def generate_query_intelligence(
     output_path = Path(output)
     with read_only_connection(database_path) as connection:
         schema = introspect_schema(connection, sample_limit=0)
+        fingerprint = schema_fingerprint(schema)
         demos = get_dataset_demos(schema)[:target]
         validated: list[ValidatedQuery] = []
         failures: list[str] = []
@@ -65,6 +69,7 @@ def generate_query_intelligence(
                 validated.append(
                     ValidatedQuery(
                         id=demo.id,
+                        schema_fingerprint=fingerprint,
                         question=demo.question,
                         reason=demo.reason,
                         tables=demo.tables,
@@ -90,6 +95,7 @@ def generate_query_intelligence(
     )
     return QueryIntelligenceReport(
         dataset_id=database_path.name,
+        schema_fingerprint=fingerprint,
         generated_query_count=len(demos),
         validated_query_count=len(validated),
         failed_query_ids=tuple(failures),

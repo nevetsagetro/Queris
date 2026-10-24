@@ -54,7 +54,7 @@ def discover_snapshot(
     with read_only_connection(database) as connection:
         schema = introspect_schema(connection, sample_limit=sample_limit)
     profile = profile_database(str(database))
-    fingerprint = _fingerprint(schema)
+    fingerprint = schema_fingerprint(schema)
     discovered_at = datetime.now(UTC)
     schema_path = root / "catalog" / f"{dataset_id}.schema.json"
     profile_path = root / "catalog" / f"{dataset_id}.profile.json"
@@ -83,7 +83,7 @@ def _find_snapshot(manifest: WorkspaceManifest, dataset_id: str) -> SnapshotMani
         raise ValueError(f"dataset is not registered in the workspace: {dataset_id}") from error
 
 
-def _fingerprint(schema: DatabaseSchema) -> str:
+def schema_fingerprint(schema: DatabaseSchema) -> str:
     document = schema.model_dump(mode="json")
     for table in document["tables"]:
         for column in table["columns"]:
