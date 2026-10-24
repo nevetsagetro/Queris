@@ -52,7 +52,7 @@ Read-only execution, charts, history, and cache
 
 **Goal:** make the local discovery product explicit before adding more connectors.
 
-- [~] Define the public CLI vocabulary: `init` and `import` are implemented; `discover`, `enrich`, `ask`, and `refresh` remain.
+- [x] Define the public CLI vocabulary: `init`, `import`, `discover`, `enrich`, `refresh`, and the existing API/demo `ask` entrypoint.
 - [x] Define the `.queris/` workspace layout for manifests, snapshots, catalog, intelligence, and cache.
 - [x] Define a versioned snapshot manifest with source URL, format, checksum, retrieval time, and schema version.
 - [x] Define dataset identity independently from a local filename.
@@ -133,7 +133,7 @@ is required to display or rerun an already validated starter.
 - [ ] Display source provenance, snapshot age, schema status, and enrichment status.
 - [ ] Keep demo history and real history visibly separate.
 - [x] Persist query results and SQL replay cache outside business tables.
-- [~] Show execution flow: discovery, retrieval, generation, validation, execution, and cache.
+- [x] Show execution flow: catalog, generation, validation, read-only execution, and cache.
 - [x] Present SQL with line numbers, copy/download actions, source tables, and read-only status.
 - [x] Show chart recommendations only when the result shape supports them.
 - [x] Add a safe export for SQL previews, catalog, profiles, and workflow artifacts.
