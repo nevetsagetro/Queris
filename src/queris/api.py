@@ -11,16 +11,21 @@ from uuid import uuid4
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, StringConstraints
 
 from queris.agent_loop import AgentQueryResult, CorrectingSQLGenerator, run_agent_loop
+from queris.demo_cache import cache_result, cached_result, load_schema_catalog
+from queris.demo_examples import DemoExample, DemoHistoryItem, get_demo_examples, get_demo_history
+from queris.demo_runner import demo_definition, run_demo_query
 from queris.generation import GeminiSQLGenerator, SQLGenerationError
 from queris.pipeline import FullSchemaSelector
 from queris.query_sources import QuerySource
+from queris.schema import DatabaseSchema, TableSchema
 
 DEFAULT_DATABASE_PATH = Path("data/retail.duckdb")
 LOGGER = logging.getLogger("queris.api")
-LOGGED_ROUTES = frozenset({"/health", "/query"})
+LOGGED_ROUTES = frozenset({"/health", "/catalog", "/examples", "/history/demo", "/query"})
 NonEmptyQuestion = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 GeneratorFactory = Callable[[], CorrectingSQLGenerator]
 RequestHandler = Callable[[Request], Awaitable[Response]]
@@ -41,6 +46,7 @@ class QueryRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     question: NonEmptyQuestion
+    demo_id: str | None = None
 
 
 class QueryResponse(BaseModel):
@@ -63,9 +69,17 @@ class QueryResponse(BaseModel):
     clarification: str | None
     assumption: str | None
     no_answer: str | None
+    cache_hit: bool = False
+    execution_mode: Literal["llm", "cache", "demo"] = "llm"
 
     @classmethod
-    def from_agent_result(cls, result: AgentQueryResult) -> "QueryResponse":
+    def from_agent_result(
+        cls,
+        result: AgentQueryResult,
+        *,
+        cache_hit: bool = False,
+        execution_mode: Literal["llm", "cache", "demo"] = "llm",
+    ) -> "QueryResponse":
         """Map the internal result to the stable HTTP response contract."""
         return cls(
             status=result.status,
@@ -83,7 +97,19 @@ class QueryResponse(BaseModel):
             clarification=result.clarification,
             assumption=result.assumption,
             no_answer=result.no_answer,
+            cache_hit=cache_hit,
+            execution_mode=execution_mode,
         )
+
+
+class CatalogResponse(BaseModel):
+    """Safe schema discovery response for frontend clients."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    source: Literal["session"]
+    table_count: int
+    tables: tuple[TableSchema, ...]
 
 
 def create_app(
@@ -99,6 +125,14 @@ def create_app(
         else os.getenv("QUERIS_DATABASE", str(DEFAULT_DATABASE_PATH))
     )
     application = FastAPI(title="Queris API", version="0.1.0")
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+        allow_methods=["GET", "POST"],
+        allow_headers=["content-type"],
+    )
+    query_cache: dict[str, AgentQueryResult] = {}
+    schema_cache: dict[str, DatabaseSchema] = {}
 
     @application.middleware("http")
     async def log_request(request: Request, call_next: RequestHandler) -> Response:
@@ -147,6 +181,28 @@ def create_app(
             database_available=available,
         )
 
+    @application.get("/catalog", response_model=CatalogResponse)
+    async def catalog() -> CatalogResponse:
+        if not configured_database.is_file():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Configured database is unavailable",
+            )
+        schema = load_schema_catalog(schema_cache, configured_database)
+        return CatalogResponse(
+            source="session",
+            table_count=len(schema.tables),
+            tables=schema.tables,
+        )
+
+    @application.get("/examples", response_model=tuple[DemoExample, ...])
+    async def examples() -> tuple[DemoExample, ...]:
+        return get_demo_examples()
+
+    @application.get("/history/demo", response_model=tuple[DemoHistoryItem, ...])
+    async def demo_history() -> tuple[DemoHistoryItem, ...]:
+        return get_demo_history()
+
     @application.post("/query", response_model=QueryResponse)
     async def query(request: QueryRequest, http_request: Request) -> QueryResponse:
         if not configured_database.is_file():
@@ -157,13 +213,25 @@ def create_app(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Configured database is unavailable",
             )
+        cached = cached_result(query_cache, configured_database, request.question)
+        cache_hit = cached is not None
+        prepared_demo = demo_definition(request.demo_id) if request.demo_id else None
         try:
-            result = run_agent_loop(
-                configured_database,
-                request.question,
-                generator_factory(),
-                FullSchemaSelector(),
-            )
+            if cached is not None:
+                result = cached
+                execution_mode = "cache"
+            elif prepared_demo is not None:
+                result = run_demo_query(configured_database, prepared_demo)
+                execution_mode = "demo"
+            else:
+                result = run_agent_loop(
+                    configured_database,
+                    request.question,
+                    generator_factory(),
+                    FullSchemaSelector(),
+                    schema_override=load_schema_catalog(schema_cache, configured_database),
+                )
+                execution_mode = "llm"
         except SQLGenerationError as error:
             http_request.state.query_decision = "unavailable"
             http_request.state.retry_count = 0
@@ -172,6 +240,8 @@ def create_app(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=str(error),
             ) from error
+        if not cache_hit:
+            cache_result(query_cache, configured_database, request.question, result)
         if result.blocked:
             http_request.state.query_decision = "blocked"
         elif result.status == "success":
@@ -181,7 +251,11 @@ def create_app(
         http_request.state.retry_count = result.retry_count
         http_request.state.blocked = result.blocked
         http_request.state.agent_latency_ms = round(result.latency_ms, 3)
-        return QueryResponse.from_agent_result(result)
+        return QueryResponse.from_agent_result(
+            result,
+            cache_hit=cache_hit,
+            execution_mode=execution_mode,
+        )
 
     return application
 

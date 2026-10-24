@@ -71,6 +71,29 @@ def test_agent_loop_returns_typed_success(sample_database: Path) -> None:
     assert generator.calls[0][2] is None
 
 
+def test_agent_loop_reports_operational_progress(sample_database: Path) -> None:
+    events: list[str] = []
+
+    result = run_agent_loop(
+        sample_database,
+        "How many orders are there?",
+        FakeGenerator("SELECT COUNT(*) FROM orders"),
+        FullSchemaSelector(),
+        sample_limit=0,
+        progress_callback=events.append,
+    )
+
+    assert result.status == "success"
+    assert events == [
+        "Sending question to Queris...",
+        "Analyzing database schema...",
+        "Checking whether the question is answerable...",
+        "Selecting relevant tables and generating SQL...",
+        "Validating SQL against the read-only safety policy...",
+        "Executing validated SQL on DuckDB (read-only)...",
+    ]
+
+
 def test_agent_loop_records_total_latency(
     sample_database: Path,
     monkeypatch: pytest.MonkeyPatch,

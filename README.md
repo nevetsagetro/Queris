@@ -94,8 +94,25 @@ Open the displayed Streamlit URL and ask:
 
 > Which product categories have negative total gross profit?
 
-The demo shows the validated SQL, result table, chart, explanation, referenced schema sources,
-retry count, latency, blocked status, and session history.
+The demo is organized into `Ask`, `Data catalog`, and `History` tabs. It shows the execution flow
+from question to schema inspection, SQL generation, read-only validation, execution, and
+presentation. Repeated questions reuse an in-memory session cache while the DuckDB file is
+unchanged; the result table, chart, explanation, validated SQL, referenced schema sources, retry
+count, latency, blocked status, and session history remain available for review.
+
+For a larger local demo source with realistic prices, customers, countries, and time series, run
+`queris-online-retail data/online_retail.duckdb`, then start `queris-demo`. The demo prefers the
+larger database when it exists. The command downloads the UCI Online Retail workbook into ignored
+local storage and normalizes it for Queris. See
+[`docs/online-retail-demo.md`](docs/online-retail-demo.md) for ready-to-use questions and source
+attribution. The deterministic `retail.duckdb` fixture remains the test and CI database.
+
+## React frontend
+
+The React/TypeScript frontend lives under [`frontend/`](frontend/). It exposes the 100 curated
+question starters, a browsable data catalog, session history, and the safe FastAPI query boundary.
+Start the API with `QUERIS_DATABASE=data/online_retail.duckdb queris-api`, then follow
+[`frontend/README.md`](frontend/README.md).
 
 ## Run the API
 

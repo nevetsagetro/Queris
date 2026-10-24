@@ -237,7 +237,8 @@ results, non-empty explanations, and zero retries.
 ## Phase 15 — Deferred Stretch Goals
 **Status:** optional and outside both the accepted portfolio baseline and the Phase 10–14 reasoning track.
 
-- [ ] React/TypeScript frontend replacing/complementing Streamlit
+- [ ] React/TypeScript frontend replacing/complementing Streamlit (modular demo registry, API
+  discovery, and browser components implemented; production handoff remains)
 - [ ] Multi-dataset support (schema switch at runtime)
 - [ ] Voice question input through Whisper-compatible speech-to-text, feeding the transcript into the existing validated natural-language query pipeline
 - [ ] Pluggable database-engine adapters, starting with PostgreSQL and preserving dialect-aware SQL validation plus read-only execution boundaries

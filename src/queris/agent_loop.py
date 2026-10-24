@@ -1,5 +1,6 @@
 """Typed LangGraph foundation for bounded text-to-SQL orchestration."""
 
+from collections.abc import Callable
 from pathlib import Path
 from time import perf_counter
 from typing import Any, Literal, NotRequired, Protocol, Self, TypedDict
@@ -155,14 +156,23 @@ def run_agent_loop(
     sample_limit: int = 3,
     max_retries: int = DEFAULT_MAX_RETRIES,
     question_resolver: QuestionResolver | None = None,
+    progress_callback: Callable[[str], None] | None = None,
+    schema_override: DatabaseSchema | None = None,
 ) -> AgentQueryResult:
     """Run generate, validate, and execute with a bounded correction loop."""
     normalized_question = _normalize_question(question)
     _validate_max_retries(max_retries)
     started_at = perf_counter()
+    _report_progress(progress_callback, "Sending question to Queris...")
 
     with read_only_connection(database_path) as connection:
-        schema = introspect_schema(connection, sample_limit=sample_limit)
+        if schema_override is None:
+            _report_progress(progress_callback, "Analyzing database schema...")
+            schema = introspect_schema(connection, sample_limit=sample_limit)
+        else:
+            _report_progress(progress_callback, "Using cached schema catalog...")
+            schema = schema_override
+        _report_progress(progress_callback, "Checking whether the question is answerable...")
         resolution = (
             question_resolver.resolve(schema, normalized_question) if question_resolver else None
         )
@@ -185,7 +195,7 @@ def run_agent_loop(
                 no_answer=resolution.message,
             )
         assumption = resolution.message if resolution is not None else None
-        graph = _build_graph(connection, generator, schema_selector)
+        graph = _build_graph(connection, generator, schema_selector, progress_callback)
         state = graph.invoke(
             {
                 "question": normalized_question,
@@ -225,8 +235,10 @@ def _build_graph(
     connection: duckdb.DuckDBPyConnection,
     generator: CorrectingSQLGenerator,
     schema_selector: SchemaSelector,
+    progress_callback: Callable[[str], None] | None = None,
 ) -> CompiledStateGraph[_AgentState, None, _AgentState, _AgentState]:
     def generate(state: _AgentState) -> dict[str, object]:
+        _report_progress(progress_callback, "Selecting relevant tables and generating SQL...")
         selected_schema = schema_selector.select_schema(state["schema"], state["question"])
         return {
             "sql": generator.generate_sql(
@@ -240,6 +252,7 @@ def _build_graph(
         }
 
     def validate(state: _AgentState) -> dict[str, str]:
+        _report_progress(progress_callback, "Validating SQL against the read-only safety policy...")
         try:
             parse_read_only(state["sql"])
         except SQLValidationError as error:
@@ -251,6 +264,7 @@ def _build_graph(
         return {}
 
     def execute(state: _AgentState) -> dict[str, object]:
+        _report_progress(progress_callback, "Executing validated SQL on DuckDB (read-only)...")
         try:
             cursor = execute_read_only(connection, state["sql"])
         except SQLValidationError as error:
@@ -276,6 +290,10 @@ def _build_graph(
         error = state.get("error")
         if failure_stage is None or error is None:
             raise RuntimeError("failed graph state is missing correction diagnostics")
+        _report_progress(
+            progress_callback,
+            "Retrying SQL generation with the database feedback...",
+        )
         return {
             "correction": SQLCorrectionContext(
                 previous_sql=state["sql"],
@@ -323,6 +341,12 @@ def _normalize_question(question: str) -> str:
 def _validate_max_retries(max_retries: int) -> None:
     if type(max_retries) is not int or not 0 <= max_retries <= MAX_RETRIES:
         raise ValueError(f"max_retries must be an integer between 0 and {MAX_RETRIES}")
+
+
+def _report_progress(callback: Callable[[str], None] | None, message: str) -> None:
+    """Send a safe operational status update to an optional interactive caller."""
+    if callback is not None:
+        callback(message)
 
 
 def _build_exhaustion_explanation(retry_count: int) -> str:

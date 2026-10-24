@@ -55,6 +55,77 @@ async def test_health_reports_database_readiness(sample_database: Path) -> None:
 
 
 @pytest.mark.anyio
+async def test_catalog_and_examples_are_discoverable(sample_database: Path) -> None:
+    async with api_client(create_app(database_path=sample_database)) as client:
+        catalog = await client.get("/catalog")
+        examples = await client.get("/examples")
+        demo_history = await client.get("/history/demo")
+
+    assert catalog.status_code == 200
+    assert catalog.json()["table_count"] == 5
+    assert {table["name"] for table in catalog.json()["tables"]} == {
+        "categories",
+        "order_items",
+        "orders",
+        "products",
+        "regions",
+    }
+    assert examples.status_code == 200
+    assert len(examples.json()) == 100
+    assert examples.json()[0]["question"]
+    assert demo_history.status_code == 200
+    assert len(demo_history.json()) == 100
+    assert demo_history.json()[0]["status"] == "ready_to_run"
+    assert demo_history.json()[0]["source"] == "demo"
+
+
+@pytest.mark.anyio
+async def test_query_reuses_api_cache(
+    sample_database: Path,
+) -> None:
+    calls = 0
+
+    def generator_factory() -> StaticGenerator:
+        nonlocal calls
+        calls += 1
+        return StaticGenerator("SELECT COUNT(*) AS order_count FROM orders")
+
+    app = create_app(database_path=sample_database, generator_factory=generator_factory)
+    async with api_client(app) as client:
+        first = await client.post("/query", json={"question": "How many orders?"})
+        second = await client.post("/query", json={"question": "  how many   ORDERS? "})
+
+    assert first.json()["cache_hit"] is False
+    assert second.json()["cache_hit"] is True
+    assert calls == 1
+
+
+@pytest.mark.anyio
+async def test_demo_query_uses_prepared_sql_without_generator(
+    sample_database: Path,
+) -> None:
+    def generator_factory() -> StaticGenerator:
+        raise AssertionError("demo queries must not construct an LLM generator")
+
+    app = create_app(database_path=sample_database, generator_factory=generator_factory)
+    async with api_client(app) as client:
+        response = await client.post(
+            "/query",
+            json={
+                "question": "What was total revenue by country?",
+                "demo_id": "revenue-01",
+            },
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["execution_mode"] == "demo"
+    assert payload["cache_hit"] is False
+    assert payload["status"] == "success"
+    assert payload["rows"]
+
+
+@pytest.mark.anyio
 async def test_query_returns_typed_safe_agent_result(
     sample_database: Path,
     caplog: pytest.LogCaptureFixture,
