@@ -17,11 +17,19 @@ from pydantic import BaseModel, ConfigDict, StringConstraints
 from queris.agent_loop import AgentQueryResult, CorrectingSQLGenerator, run_agent_loop
 from queris.catalog_enrichment import EnrichmentStatus, enrich_schema
 from queris.catalog_profile import CatalogProfile, profile_database
+from queris.chart_recommender import ChartRecommendation, recommend_chart
 from queris.datasets import DatasetInfo, discover_datasets, select_dataset
 from queris.demo_cache import cache_result, cached_result, load_schema_catalog
 from queris.demo_examples import DemoExample, DemoHistoryItem, get_demo_examples, get_demo_history
-from queris.demo_runner import demo_definition, run_demo_query
+from queris.demo_runner import demo_definition, run_demo_query, run_prepared_query
 from queris.generation import GeminiSQLGenerator, SQLGenerationError
+from queris.language_similarity import (
+    QuestionIntent,
+    SimilarQuestion,
+    analyze_question,
+    find_similar_questions,
+    prompt_context,
+)
 from queris.pipeline import FullSchemaSelector
 from queris.query_sources import QuerySource
 from queris.recommendations import RecommendedRun, recommend_runs
@@ -38,6 +46,7 @@ LOGGED_ROUTES = frozenset(
         "/catalog/profile",
         "/catalog/enrichment",
         "/recommendations",
+        "/language/similarity",
         "/examples",
         "/history/demo",
         "/query",
@@ -46,6 +55,19 @@ LOGGED_ROUTES = frozenset(
 NonEmptyQuestion = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 GeneratorFactory = Callable[[], CorrectingSQLGenerator]
 RequestHandler = Callable[[Request], Awaitable[Response]]
+
+
+class SimilarityAwareGenerator:
+    """Decorate a generator with curated, explicitly untrusted prompt context."""
+
+    def __init__(
+        self, generator: CorrectingSQLGenerator, similar_questions: tuple[SimilarQuestion, ...]
+    ):
+        self.generator = generator
+        self.context = prompt_context(similar_questions)
+
+    def generate_sql(self, schema: DatabaseSchema, question: str, correction: Any = None) -> str:
+        return self.generator.generate_sql(schema, question + self.context, correction)
 
 
 class HealthResponse(BaseModel):
@@ -74,6 +96,23 @@ class DatasetSelectionRequest(BaseModel):
     dataset_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
+class LanguageSimilarityRequest(BaseModel):
+    """Question submitted for local intent and similarity analysis."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    question: NonEmptyQuestion
+
+
+class LanguageAnalysisResponse(BaseModel):
+    """Local intent interpretation and similar validated question patterns."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    intent: QuestionIntent
+    similar_questions: tuple[SimilarQuestion, ...]
+
+
 class QueryResponse(BaseModel):
     """One typed terminal response from the safe agent loop."""
 
@@ -96,6 +135,8 @@ class QueryResponse(BaseModel):
     no_answer: str | None
     cache_hit: bool = False
     execution_mode: Literal["llm", "cache", "demo"] = "llm"
+    chart_recommendation: ChartRecommendation | None = None
+    similar_questions: tuple[SimilarQuestion, ...] = ()
 
     @classmethod
     def from_agent_result(
@@ -104,6 +145,7 @@ class QueryResponse(BaseModel):
         *,
         cache_hit: bool = False,
         execution_mode: Literal["llm", "cache", "demo"] = "llm",
+        similar_questions: tuple[SimilarQuestion, ...] = (),
     ) -> "QueryResponse":
         """Map the internal result to the stable HTTP response contract."""
         return cls(
@@ -124,6 +166,10 @@ class QueryResponse(BaseModel):
             no_answer=result.no_answer,
             cache_hit=cache_hit,
             execution_mode=execution_mode,
+            chart_recommendation=(
+                recommend_chart(result.columns, result.rows) if result.status == "success" else None
+            ),
+            similar_questions=similar_questions,
         )
 
 
@@ -272,6 +318,13 @@ def create_app(
         schema, _ = active_schema_and_enrichment()
         return recommend_runs(schema)
 
+    @application.post("/language/similarity", response_model=LanguageAnalysisResponse)
+    async def language_similarity(request: LanguageSimilarityRequest) -> LanguageAnalysisResponse:
+        return LanguageAnalysisResponse(
+            intent=analyze_question(request.question),
+            similar_questions=find_similar_questions(request.question),
+        )
+
     @application.get("/examples", response_model=tuple[DemoExample, ...])
     async def examples() -> tuple[DemoExample, ...]:
         return get_demo_examples()
@@ -306,18 +359,38 @@ def create_app(
         cached = cached_result(query_cache, active_database, request.question)
         cache_hit = cached is not None
         prepared_demo = demo_definition(request.demo_id) if request.demo_id else None
+        similar_questions = find_similar_questions(request.question)
         try:
+            generic_recommendation = (
+                _generic_recommendation(request.demo_id) if request.demo_id else None
+            )
             if cached is not None:
                 result = cached
                 execution_mode = "cache"
             elif prepared_demo is not None:
                 result = run_demo_query(active_database, prepared_demo)
                 execution_mode = "demo"
+            elif generic_recommendation is not None:
+                table_name = generic_recommendation
+                schema = active_schema_and_enrichment()[0]
+                if table_name not in {table.name for table in schema.tables}:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Unknown prepared recommendation",
+                    )
+                escaped_table = table_name.replace('"', '""')
+                result = run_prepared_query(
+                    active_database,
+                    request.question,
+                    f'SELECT COUNT(*) AS row_count FROM "{escaped_table}"',
+                )
+                execution_mode = "demo"
             else:
+                generator = SimilarityAwareGenerator(generator_factory(), similar_questions)
                 result = run_agent_loop(
                     active_database,
                     request.question,
-                    generator_factory(),
+                    generator,
                     FullSchemaSelector(),
                     schema_override=active_schema_and_enrichment()[0],
                 )
@@ -345,9 +418,18 @@ def create_app(
             result,
             cache_hit=cache_hit,
             execution_mode=execution_mode,
+            similar_questions=similar_questions,
         )
 
     return application
+
+
+def _generic_recommendation(demo_id: str | None) -> str | None:
+    """Parse only the server-generated generic recommendation namespace."""
+    if not demo_id or not demo_id.startswith("table-count:"):
+        return None
+    table_name = demo_id.removeprefix("table-count:")
+    return table_name if table_name and ":" not in table_name else None
 
 
 app = create_app()

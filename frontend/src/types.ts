@@ -119,4 +119,13 @@ export type QueryResult = {
   no_answer: string | null;
   cache_hit: boolean;
   execution_mode: "llm" | "cache" | "demo";
+  chart_recommendation: ChartRecommendation | null;
+};
+
+export type ChartRecommendation = {
+  chart: "bar" | "line" | "scatter" | "metric" | "table";
+  confidence: number;
+  x_field: string | null;
+  y_field: string | null;
+  reason: string;
 };

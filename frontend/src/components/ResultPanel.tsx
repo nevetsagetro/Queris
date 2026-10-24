@@ -15,6 +15,8 @@ export function ResultPanel({ result }: { result: QueryResult }) {
       </div>
       {result.status === "success" && (
         <>
+          {result.chart_recommendation && <div className="chart-recommendation"><div><p className="eyebrow">Recommended view</p><strong>{result.chart_recommendation.chart} chart</strong><span>{result.chart_recommendation.reason}</span></div><b>{Math.round(result.chart_recommendation.confidence * 100)}% confidence</b></div>}
+          {result.similar_questions.length > 0 && <div className="language-panel"><p className="eyebrow">Language analysis</p><strong>Related validated patterns</strong>{result.similar_questions.slice(0, 3).map((item) => <span key={item.demo_id}>{Math.round(item.similarity * 100)}% · {item.question}</span>)}</div>}
           <div className="result-section"><p className="eyebrow">Results · Resultado</p><div className="result-table"><div className="column-row column-header">{result.columns.map((column) => <span key={column}>{column}</span>)}</div>{result.rows.slice(0, 100).map((row, index) => <div className="column-row" key={index}>{row.map((value, cell) => <span key={cell}>{String(value)}</span>)}</div>)}</div>
           {numeric && <div className="mini-chart"><p className="eyebrow">Quick chart · {numeric.label}</p>{numeric.items.map((item) => <div className="bar-row" key={item.label}><span>{item.label}</span><div><i style={{ width: `${(item.value / numeric.max) * 100}%` }} /></div><strong>{item.value.toLocaleString()}</strong></div>)}</div>}</div>
           <div className="result-section"><p className="eyebrow">SQL · Consulta ejecutada</p><pre className="sql-view">{result.sql}</pre></div>

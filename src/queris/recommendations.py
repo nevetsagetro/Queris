@@ -65,4 +65,19 @@ def recommend_runs(schema: DatabaseSchema, limit: int = 12) -> tuple[Recommended
         )
         if len(selected) >= limit:
             break
+    if not selected:
+        for priority, table_name in enumerate(sorted(table_names), start=1):
+            selected.append(
+                RecommendedRun(
+                    id=f"recommendation-table-count-{table_name}",
+                    demo_id=f"table-count:{table_name}",
+                    question=f"How many rows are in {table_name}?",
+                    reason="A row-count baseline is the safest first analysis for a new dataset.",
+                    tables=(table_name,),
+                    chart="metric",
+                    priority=priority,
+                )
+            )
+            if len(selected) >= limit:
+                break
     return tuple(selected)

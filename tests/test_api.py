@@ -62,6 +62,10 @@ async def test_catalog_and_examples_are_discoverable(sample_database: Path) -> N
         profile = await client.get("/catalog/profile")
         enrichment = await client.get("/catalog/enrichment")
         recommendations = await client.get("/recommendations")
+        language = await client.post(
+            "/language/similarity",
+            json={"question": "How many customers were there in December?"},
+        )
         examples = await client.get("/examples")
         demo_history = await client.get("/history/demo")
 
@@ -74,6 +78,9 @@ async def test_catalog_and_examples_are_discoverable(sample_database: Path) -> N
     assert enrichment.json()["status"] in {"raw", "approved", "stale"}
     assert recommendations.status_code == 200
     assert recommendations.json()
+    assert language.status_code == 200
+    assert language.json()["intent"]["entity"] == "customer"
+    assert language.json()["intent"]["filters"] == ["december"]
     assert catalog.json()["table_count"] == 5
     assert {table["name"] for table in catalog.json()["tables"]} == {
         "categories",

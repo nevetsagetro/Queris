@@ -36,6 +36,26 @@ def run_demo_query(database_path: str | Path, definition: DemoDefinition) -> Age
     )
 
 
+def run_prepared_query(database_path: str | Path, question: str, sql: str) -> AgentQueryResult:
+    """Execute a server-selected read-only query for a generic dataset recommendation."""
+    started_at = perf_counter()
+    with read_only_connection(database_path) as connection:
+        schema = introspect_schema(connection, sample_limit=0)
+        cursor = execute_read_only(connection, sql)
+        columns = tuple(description[0] for description in cursor.description or ())
+        rows = tuple(tuple(row) for row in cursor.fetchall())
+    return AgentQueryResult(
+        status="success",
+        question=question,
+        sql=sql,
+        columns=columns,
+        rows=rows,
+        sources=extract_query_sources(sql, schema),
+        retry_count=0,
+        latency_ms=(perf_counter() - started_at) * 1000,
+    )
+
+
 def _prepared_sql(definition: DemoDefinition, schema: DatabaseSchema) -> str:
     """Use the registered builder or a safe fallback for another schema fixture."""
     table_columns = {
