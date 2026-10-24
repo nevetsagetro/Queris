@@ -1,5 +1,8 @@
 """Deterministic demos for public datasets without the retail-specific registry."""
 
+# SQL templates are intentionally kept readable as single statements.
+# ruff: noqa: E501
+
 from dataclasses import dataclass
 from typing import Literal
 
@@ -21,11 +24,17 @@ class DatasetDemo:
 def get_dataset_demos(schema: DatabaseSchema) -> tuple[DatasetDemo, ...]:
     """Return deterministic demos for a recognized public dataset shape."""
     table_names = {table.name for table in schema.tables}
-    olist = _olist_demos(schema) if {"olist_orders", "olist_order_items"}.issubset(table_names) else ()
+    olist = (
+        _olist_demos(schema) if {"olist_orders", "olist_order_items"}.issubset(table_names) else ()
+    )
     if olist:
-        return olist
+        return _pad_dataset_demos(schema, olist)
     penguins = _penguin_demos(schema) if "penguins" in table_names else ()
-    return penguins
+    if penguins:
+        return _pad_dataset_demos(schema, penguins)
+    if {"Track", "Album", "Artist"}.issubset(table_names):
+        return _pad_dataset_demos(schema, ())
+    return ()
 
 
 def get_dataset_demo(schema: DatabaseSchema, demo_id: str | None) -> DatasetDemo | None:
@@ -36,7 +45,12 @@ def get_dataset_demo(schema: DatabaseSchema, demo_id: str | None) -> DatasetDemo
 
 
 def _penguin_demos(schema: DatabaseSchema) -> tuple[DatasetDemo, ...]:
-    columns = {column.name for table in schema.tables if table.name == "penguins" for column in table.columns}
+    columns = {
+        column.name
+        for table in schema.tables
+        if table.name == "penguins"
+        for column in table.columns
+    }
     if not {"species", "body_mass_g", "island", "year"}.issubset(columns):
         return ()
     return (
@@ -72,7 +86,68 @@ def _penguin_demos(schema: DatabaseSchema) -> tuple[DatasetDemo, ...]:
             chart="line",
             sql='SELECT year, COUNT(*) AS penguin_count FROM "penguins" GROUP BY year ORDER BY year',
         ),
+    ) + _penguin_generated_demos(schema)
+
+
+def _penguin_generated_demos(schema: DatabaseSchema) -> tuple[DatasetDemo, ...]:
+    measures = (
+        ("body_mass_g", "body mass", "average_body_mass_g"),
+        ("bill_length_mm", "bill length", "average_bill_length_mm"),
+        ("bill_depth_mm", "bill depth", "average_bill_depth_mm"),
+        ("flipper_length_mm", "flipper length", "average_flipper_length_mm"),
     )
+    dimensions = (("species", "species"), ("island", "island"), ("sex", "sex"), ("year", "year"))
+    demos: list[DatasetDemo] = []
+    for dimension, label in dimensions:
+        for column, measure_label, alias in measures:
+            demos.append(
+                DatasetDemo(
+                    id=f"penguins-average-{column}-by-{dimension}",
+                    question=f"What is the average {measure_label} by {label}?",
+                    reason=f"Compare {measure_label} across the {label} dimension.",
+                    tables=("penguins",),
+                    chart="line" if dimension == "year" else "bar",
+                    sql=f'SELECT {dimension}, ROUND(AVG({column}), 2) AS {alias} FROM "penguins" WHERE {column} IS NOT NULL GROUP BY {dimension} ORDER BY {dimension}',
+                )
+            )
+    for column, measure_label, _alias in measures:
+        demos.extend(
+            (
+                DatasetDemo(
+                    id=f"penguins-median-{column}",
+                    question=f"What is the median {measure_label} by species?",
+                    reason=f"A median is more robust than an average for {measure_label} comparisons.",
+                    tables=("penguins",),
+                    chart="bar",
+                    sql=f'SELECT species, ROUND(QUANTILE_CONT({column}, 0.5), 2) AS median_{column} FROM "penguins" WHERE {column} IS NOT NULL GROUP BY species ORDER BY median_{column} DESC',
+                ),
+                DatasetDemo(
+                    id=f"penguins-rank-{column}",
+                    question=f"What is the {measure_label} rank within each species?",
+                    reason="A window ranking compares individual observations within species.",
+                    tables=("penguins",),
+                    chart="table",
+                    sql=f'SELECT species, island, {column}, RANK() OVER (PARTITION BY species ORDER BY {column} DESC) AS measurement_rank FROM "penguins" WHERE {column} IS NOT NULL ORDER BY species, measurement_rank LIMIT 50',
+                ),
+            )
+        )
+    for left, left_label, right, right_label in (
+        ("bill_length_mm", "bill length", "bill_depth_mm", "bill depth"),
+        ("bill_length_mm", "bill length", "body_mass_g", "body mass"),
+        ("flipper_length_mm", "flipper length", "body_mass_g", "body mass"),
+        ("bill_depth_mm", "bill depth", "body_mass_g", "body mass"),
+    ):
+        demos.append(
+            DatasetDemo(
+                id=f"penguins-correlation-{left}-{right}",
+                question=f"How are {left_label} and {right_label} correlated?",
+                reason="Correlation tests the relationship between two numeric measurements.",
+                tables=("penguins",),
+                chart="metric",
+                sql=f'SELECT ROUND(CORR({left}, {right}), 3) AS correlation FROM "penguins" WHERE {left} IS NOT NULL AND {right} IS NOT NULL',
+            )
+        )
+    return tuple(demos)
 
 
 def _olist_demos(schema: DatabaseSchema) -> tuple[DatasetDemo, ...]:
@@ -173,7 +248,12 @@ WHERE order_count > 1""",
             id="olist-review-by-category",
             question="What is the average review score by product category?",
             reason="Reviews, products, and translation tables connect satisfaction to product categories.",
-            tables=("olist_order_reviews", "olist_order_items", "olist_products", "product_category_name_translation"),
+            tables=(
+                "olist_order_reviews",
+                "olist_order_items",
+                "olist_products",
+                "product_category_name_translation",
+            ),
             chart="bar",
             sql="""SELECT t.product_category_name_english AS category,
        ROUND(AVG(r.review_score), 2) AS average_review_score
@@ -186,3 +266,94 @@ GROUP BY category
 ORDER BY average_review_score DESC""",
         ),
     )
+
+
+def _pad_dataset_demos(
+    schema: DatabaseSchema, curated: tuple[DatasetDemo, ...], target: int = 50
+) -> tuple[DatasetDemo, ...]:
+    """Add tested catalog/discovery queries until every public workspace is equally deep."""
+    demos = list(curated)
+    existing = {demo.id for demo in demos}
+    numeric_types = ("INTEGER", "BIGINT", "DOUBLE", "DECIMAL", "FLOAT", "HUGEINT")
+    for table in schema.tables:
+        quoted_table = _quote(table.name)
+        demos.append(
+            DatasetDemo(
+                id=f"catalog-row-count-{table.name}",
+                question=f"How many rows are in {table.name}?",
+                reason="A row-count baseline validates the scale of the active table.",
+                tables=(table.name,),
+                chart="metric",
+                sql=f"SELECT COUNT(*) AS row_count FROM {quoted_table}",
+            )
+        )
+        for column in table.columns:
+            quoted_column = _quote(column.name)
+            demos.append(
+                DatasetDemo(
+                    id=f"catalog-distinct-{table.name}-{column.name}",
+                    question=f"How many distinct {column.name} values are in {table.name}?",
+                    reason="Distinct values reveal the cardinality of a business field.",
+                    tables=(table.name,),
+                    chart="metric",
+                    sql=f"SELECT COUNT(DISTINCT {quoted_column}) AS distinct_count FROM {quoted_table}",
+                )
+            )
+            if column.data_type.upper().split("(", 1)[0] in numeric_types:
+                demos.append(
+                    DatasetDemo(
+                        id=f"catalog-summary-{table.name}-{column.name}",
+                        question=f"What is the numeric profile of {column.name} in {table.name}?",
+                        reason="A compact numeric profile exposes range and central tendency.",
+                        tables=(table.name,),
+                        chart="table",
+                        sql=f"SELECT ROUND(MIN({quoted_column}), 2) AS minimum, ROUND(AVG({quoted_column}), 2) AS average, ROUND(MAX({quoted_column}), 2) AS maximum FROM {quoted_table}",
+                    )
+                )
+            else:
+                demos.append(
+                    DatasetDemo(
+                        id=f"catalog-distribution-{table.name}-{column.name}",
+                        question=f"What are the most common {column.name} values in {table.name}?",
+                        reason="A bounded distribution highlights the dominant categories.",
+                        tables=(table.name,),
+                        chart="bar",
+                        sql=f"SELECT {quoted_column}, COUNT(*) AS row_count FROM {quoted_table} WHERE {quoted_column} IS NOT NULL GROUP BY {quoted_column} ORDER BY row_count DESC LIMIT 10",
+                    )
+                )
+    for table in schema.tables:
+        columns = [
+            column
+            for column in table.columns
+            if column.data_type.upper().split("(", 1)[0] in numeric_types
+        ]
+        dimensions = [
+            column
+            for column in table.columns
+            if column.data_type.upper().split("(", 1)[0] not in numeric_types
+        ]
+        for measure in columns:
+            for dimension in dimensions[:4]:
+                demos.append(
+                    DatasetDemo(
+                        id=f"catalog-average-{table.name}-{measure.name}-by-{dimension.name}",
+                        question=f"What is the average {measure.name} by {dimension.name} in {table.name}?",
+                        reason="A grouped measure connects a numeric field to a business dimension.",
+                        tables=(table.name,),
+                        chart="bar",
+                        sql=f"SELECT {_quote(dimension.name)}, ROUND(AVG({_quote(measure.name)}), 2) AS average_value FROM {_quote(table.name)} WHERE {_quote(measure.name)} IS NOT NULL GROUP BY {_quote(dimension.name)} ORDER BY average_value DESC LIMIT 20",
+                    )
+                )
+    unique: list[DatasetDemo] = []
+    for demo in demos:
+        if demo.id not in existing:
+            existing.add(demo.id)
+            unique.append(demo)
+        if len(curated) + len(unique) >= target:
+            break
+    return tuple((*curated, *unique))
+
+
+def _quote(identifier: str) -> str:
+    """Quote an identifier discovered from the read-only schema."""
+    return '"' + identifier.replace('"', '""') + '"'

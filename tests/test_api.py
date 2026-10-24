@@ -126,10 +126,10 @@ async def test_non_retail_dataset_gets_schema_specific_starters(tmp_path: Path) 
         )
 
     assert examples.status_code == 200
-    assert len(examples.json()) == 4
+    assert len(examples.json()) >= 12
     assert examples.json()[0]["question"] == "How many penguins are there by species?"
     assert demo_history.status_code == 200
-    assert len(demo_history.json()) == 4
+    assert len(demo_history.json()) >= 12
     assert demo_history.json()[0]["id"] == "history-penguins-species-count"
     assert catalog.json()["table_count"] == 1
     assert recommendations.json()[0]["demo_id"] == "penguins-species-count"

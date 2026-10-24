@@ -18,7 +18,7 @@ from queris.agent_loop import AgentQueryResult, CorrectingSQLGenerator, run_agen
 from queris.catalog_enrichment import EnrichmentStatus, enrich_schema
 from queris.catalog_profile import CatalogProfile, profile_database
 from queris.chart_recommender import ChartRecommendation, recommend_chart
-from queris.dataset_demos import get_dataset_demo
+from queris.dataset_demos import get_dataset_demo, get_dataset_demos
 from queris.datasets import DatasetInfo, discover_datasets, select_dataset
 from queris.demo_cache import cache_result, cached_result, load_schema_catalog
 from queris.demo_examples import DemoExample, DemoHistoryItem, get_demo_examples, get_demo_history
@@ -317,7 +317,7 @@ def create_app(
                 detail="Configured database is unavailable",
             )
         schema, _ = active_schema_and_enrichment()
-        return recommend_runs(schema)
+        return recommend_runs(schema, limit=50)
 
     @application.post("/language/similarity", response_model=LanguageAnalysisResponse)
     async def language_similarity(request: LanguageSimilarityRequest) -> LanguageAnalysisResponse:
@@ -476,14 +476,14 @@ def _dataset_examples(schema: DatabaseSchema) -> tuple[DemoExample, ...]:
         return get_demo_examples()
     return tuple(
         DemoExample(
-            id=run.demo_id,
-            title=run.question,
-            question=run.question,
+            id=demo.id,
+            title=demo.question,
+            question=demo.question,
             category="discovery",
-            tables=run.tables,
-            chart=run.chart,
+            tables=demo.tables,
+            chart=demo.chart,
         )
-        for run in recommend_runs(schema)
+        for demo in get_dataset_demos(schema)
     )
 
 
@@ -493,18 +493,18 @@ def _dataset_demo_history(schema: DatabaseSchema) -> tuple[DemoHistoryItem, ...]
         return get_demo_history()
     return tuple(
         DemoHistoryItem(
-            id=f"history-{run.demo_id}",
+            id=f"history-{demo.id}",
             source="demo",
             created_at="2026-01-01T00:00:00Z",
             user="Queris catalog",
-            question=run.question,
+            question=demo.question,
             status="ready_to_run",
-            tables=run.tables,
-            chart=run.chart,
+            tables=demo.tables,
+            chart=demo.chart,
             explanation="Deterministic starter generated from the active dataset catalog.",
-            result_summary=run.reason,
+            result_summary=demo.reason,
         )
-        for run in recommend_runs(schema)
+        for demo in get_dataset_demos(schema)
     )
 
 
