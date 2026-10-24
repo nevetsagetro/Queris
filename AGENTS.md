@@ -38,6 +38,8 @@ Create a virtual environment and install the package with development tools usin
 - `python -m ruff format --check .`: verify formatting.
 - `pre-commit run --all-files`: run repository checks before proposing a commit.
 - `queris-sample-data data/retail.duckdb`: create the local deterministic fixture.
+- `queris-online-retail data/online_retail.duckdb`: download the attributed UCI workbook and build
+  an ignored normalized local demo database; see `docs/online-retail-demo.md`.
 - `queris-schema data/retail.duckdb --samples 3`: print structured schema JSON.
 - `queris-enrichment-draft data/retail.duckdb`: print inactive version 1 enrichment YAML for human review.
 - `queris-wide-data data/wide.duckdb`: create the deterministic 32-table ambiguous-schema fixture.

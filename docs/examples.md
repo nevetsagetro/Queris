@@ -18,7 +18,7 @@ For the user question:
 How many products are there?
 ```
 
-the adversarial fixture injects this generated attempt:
+the fixture specifies this attempted SQL:
 
 ```sql
 DROP TABLE orders

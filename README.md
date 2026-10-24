@@ -94,8 +94,58 @@ Open the displayed Streamlit URL and ask:
 
 > Which product categories have negative total gross profit?
 
-The demo shows the validated SQL, result table, chart, explanation, referenced schema sources,
-retry count, latency, blocked status, and session history.
+The demo is organized into `Ask`, `Data catalog`, and `History` tabs. It shows the execution flow
+from question to schema inspection, SQL generation, read-only validation, execution, and
+presentation. Repeated questions reuse an in-memory session cache while the DuckDB file is
+unchanged; the result table, chart, explanation, validated SQL, referenced schema sources, retry
+count, latency, blocked status, and session history remain available for review.
+
+For a larger local demo source with realistic prices, customers, countries, and time series, run
+`queris-online-retail data/online_retail.duckdb`, then start `queris-demo`. The demo prefers the
+larger database when it exists. The command downloads the UCI Online Retail workbook into ignored
+local storage and normalizes it for Queris. See
+[`docs/online-retail-demo.md`](docs/online-retail-demo.md) for ready-to-use questions and source
+attribution. The deterministic `retail.duckdb` fixture remains the test and CI database.
+
+## React frontend
+
+The React/TypeScript frontend lives under [`frontend/`](frontend/). It exposes the 100 curated
+question starters, a local dataset selector, catalog profiles and relationships, recommended runs,
+session history, chart recommendations, language similarity hints, and the safe FastAPI query
+boundary. Start the API with `QUERIS_DATABASE=data/online_retail.duckdb QUERIS_DATABASE_DIR=data
+queris-api`, then follow
+[`frontend/README.md`](frontend/README.md).
+
+The local dataset folder can contain multiple ignored DuckDB files. The setup commands below add
+two structurally different public examples for review:
+
+```bash
+queris-dataset chinook
+queris-dataset olist
+queris-dataset penguins
+```
+
+See [`docs/additional-datasets.md`](docs/additional-datasets.md) for provenance and the
+read-only conversion boundary.
+
+### Add another dataset
+
+An existing DuckDB file can join the same catalog workflow without editing application code:
+
+```bash
+queris-dataset-workflow data/example.duckdb \
+  --dataset-name "Example Dataset" \
+  --source-name "Public publisher" \
+  --source-url "https://example.org/dataset" \
+  --license "Publisher terms" \
+  --draft metadata/example.v1.yaml \
+  --report reports/example.workflow.json
+```
+
+The command records public provenance, profiles tables and probable relationships, drafts reviewed
+catalog metadata, generates and executes deterministic starters, and reports whether the dataset
+is ready. Review the YAML and change `reviewed` to `true` before re-running. No command in this
+workflow writes to the DuckDB file; runtime connections remain read-only.
 
 ## Run the API
 
@@ -172,6 +222,10 @@ queris-ci-eval
 queris-sample-data data/retail.duckdb
 queris-wide-data data/wide.duckdb
 queris-evaluation-report data/retail.duckdb
+
+# Reproduce the enriched wide-schema retrieval result with the fixture created above
+queris-retrieval-eval data/wide.duckdb metadata/wide-schema.v1.yaml \
+  evals/wide_schema_retrieval.json --top-k 5
 
 # Strict five-question live demo evaluation
 queris-demo-eval data/retail.duckdb
