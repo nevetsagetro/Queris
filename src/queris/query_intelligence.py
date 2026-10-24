@@ -27,6 +27,7 @@ class ValidatedQuery(BaseModel):
     chart_recommendation: ChartRecommendation | None
     result_columns: tuple[str, ...]
     result_row_count: int = Field(ge=0)
+    preview_rows: tuple[tuple[object, ...], ...] = ()
     validated: Literal[True] = True
 
 
@@ -72,6 +73,7 @@ def generate_query_intelligence(
                         chart_recommendation=recommend_chart(columns, rows),
                         result_columns=columns,
                         result_row_count=len(rows),
+                        preview_rows=rows[:100],
                     )
                 )
             except Exception:

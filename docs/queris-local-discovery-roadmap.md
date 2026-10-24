@@ -132,11 +132,11 @@ is required to display or rerun an already validated starter.
 - [ ] Add a workspace selector for registered local snapshots.
 - [ ] Display source provenance, snapshot age, schema status, and enrichment status.
 - [ ] Keep demo history and real history visibly separate.
-- [ ] Persist query results and SQL replay cache outside business tables.
-- [ ] Show execution flow: discovery, retrieval, generation, validation, execution, and cache.
-- [ ] Present SQL with line numbers, copy/download actions, source tables, and read-only status.
-- [ ] Show chart recommendations only when the result shape supports them.
-- [ ] Add export for SQL, result rows, catalog, and workflow report.
+- [x] Persist query results and SQL replay cache outside business tables.
+- [~] Show execution flow: discovery, retrieval, generation, validation, execution, and cache.
+- [x] Present SQL with line numbers, copy/download actions, source tables, and read-only status.
+- [x] Show chart recommendations only when the result shape supports them.
+- [x] Add a safe export for SQL previews, catalog, profiles, and workflow artifacts.
 
 **Exit criteria:** a user can import a snapshot, understand its structure, run a question, inspect the
 SQL and sources, and reproduce the result locally without repeating LLM work.
