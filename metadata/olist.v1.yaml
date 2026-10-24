@@ -1,0 +1,141 @@
+version: 1
+reviewed: true
+tables:
+  - schema_name: main
+    name: olist_orders
+    description: Marketplace orders with lifecycle status and purchase, approval, delivery, and estimated delivery timestamps.
+    business_terms: [order, purchase, delivery]
+    aliases: [customer order, marketplace order]
+    columns:
+      - name: order_id
+        description: Unique identifier for a marketplace order.
+        aliases: [order id]
+      - name: customer_id
+        description: Identifier linking the order to the customer snapshot.
+        aliases: [customer id]
+      - name: order_status
+        description: Current lifecycle status of the order.
+        business_terms: [status, fulfillment status]
+      - name: order_purchase_timestamp
+        description: Timestamp when the customer placed the order.
+        business_terms: [purchase date, order date]
+        aliases: [purchase time]
+        unit: timestamp
+      - name: order_delivered_customer_date
+        description: Timestamp when the order was delivered to the customer, when available.
+        business_terms: [delivery date]
+        unit: timestamp
+      - name: order_estimated_delivery_date
+        description: Estimated delivery date supplied for the order.
+        business_terms: [promised delivery date]
+        unit: timestamp
+  - schema_name: main
+    name: olist_order_items
+    description: Product line items belonging to marketplace orders, including sellers, prices, and freight.
+    business_terms: [order item, line item, merchandise]
+    aliases: [items purchased]
+    columns:
+      - name: order_id
+        description: Order containing the line item.
+      - name: product_id
+        description: Product sold on the line item.
+      - name: seller_id
+        description: Seller responsible for the line item.
+      - name: price
+        description: Item price in the source currency, Brazilian real.
+        business_terms: [item revenue, sales value]
+        unit: BRL
+      - name: freight_value
+        description: Freight value charged for the line item.
+        business_terms: [shipping cost]
+        unit: BRL
+  - schema_name: main
+    name: olist_order_payments
+    description: Payment transactions and installment details associated with marketplace orders.
+    business_terms: [payment, transaction, tender]
+    columns:
+      - name: order_id
+        description: Order associated with the payment transaction.
+      - name: payment_type
+        description: Payment method used by the customer.
+        business_terms: [payment method]
+      - name: payment_installments
+        description: Number of installments selected for the payment.
+        unit: installments
+      - name: payment_value
+        description: Payment amount in Brazilian real.
+        business_terms: [paid value]
+        unit: BRL
+  - schema_name: main
+    name: olist_order_reviews
+    description: Customer review scores and optional text feedback associated with orders.
+    business_terms: [review, satisfaction, feedback]
+    columns:
+      - name: order_id
+        description: Order being reviewed.
+      - name: review_score
+        description: Customer review score on a one-to-five scale.
+        business_terms: [rating, satisfaction score]
+        unit: score 1-5
+  - schema_name: main
+    name: olist_products
+    description: Product catalogue with category labels and physical dimensions.
+    business_terms: [product, catalogue, item]
+    columns:
+      - name: product_id
+        description: Unique product identifier.
+      - name: product_category_name
+        description: Source-language product category label.
+        business_terms: [category]
+      - name: product_weight_g
+        description: Product weight in grams.
+        unit: g
+      - name: product_photos_qty
+        description: Number of product photos in the catalogue.
+        unit: photos
+  - schema_name: main
+    name: olist_customers
+    description: Customer snapshots with city, state, and postal prefix for each order relationship.
+    business_terms: [customer, buyer, geography]
+    columns:
+      - name: customer_id
+        description: Order-level customer identifier.
+      - name: customer_unique_id
+        description: Identifier that groups orders belonging to the same underlying customer.
+        aliases: [unique customer]
+      - name: customer_state
+        description: Brazilian state of the customer snapshot.
+        business_terms: [state, region]
+  - schema_name: main
+    name: olist_sellers
+    description: Seller directory with location fields.
+    business_terms: [seller, merchant, vendor]
+    columns:
+      - name: seller_id
+        description: Unique seller identifier.
+      - name: seller_state
+        description: Brazilian state where the seller is located.
+        business_terms: [seller region]
+  - schema_name: main
+    name: olist_geolocation
+    description: Postal-prefix geolocation reference with latitude, longitude, city, and state.
+    business_terms: [geolocation, postal geography, location]
+    columns:
+      - name: geolocation_zip_code_prefix
+        description: Postal code prefix used by the source geolocation reference.
+      - name: geolocation_lat
+        description: Latitude of the geolocation point.
+        unit: degrees
+      - name: geolocation_lng
+        description: Longitude of the geolocation point.
+        unit: degrees
+  - schema_name: main
+    name: product_category_name_translation
+    description: Mapping from source-language product categories to English labels.
+    business_terms: [category translation, taxonomy]
+    columns:
+      - name: product_category_name
+        description: Portuguese category label used in the product catalogue.
+      - name: product_category_name_english
+        description: English translation of the product category label.
+        aliases: [english category]

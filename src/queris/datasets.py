@@ -24,6 +24,12 @@ DATASET_PROVENANCE: dict[str, dict[str, str]] = {
         "source_url": "https://raw.githubusercontent.com/allisonhorst/palmerpenguins/main/inst/extdata/penguins.csv",
         "license": "CC0",
     },
+    "olist.duckdb": {
+        "display_name": "Olist Brazilian E-Commerce",
+        "source_name": "Kaggle · Olist",
+        "source_url": "https://www.kaggle.com/api/v1/datasets/download/olistbr/brazilian-ecommerce",
+        "license": "Kaggle dataset terms",
+    },
 }
 
 

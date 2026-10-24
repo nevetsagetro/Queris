@@ -103,8 +103,13 @@ async def test_catalog_and_examples_are_discoverable(sample_database: Path) -> N
 async def test_non_retail_dataset_gets_schema_specific_starters(tmp_path: Path) -> None:
     database = tmp_path / "penguins.duckdb"
     connection = duckdb.connect(str(database))
-    connection.execute("CREATE TABLE penguins (species VARCHAR, body_mass_g INTEGER)")
-    connection.execute("INSERT INTO penguins VALUES ('Adelie', 3700), ('Gentoo', 5000)")
+    connection.execute(
+        "CREATE TABLE penguins (species VARCHAR, body_mass_g INTEGER, island VARCHAR, year INTEGER)"
+    )
+    connection.execute(
+        "INSERT INTO penguins VALUES "
+        "('Adelie', 3700, 'Dream', 2007), ('Gentoo', 5000, 'Biscoe', 2008)"
+    )
     connection.close()
 
     async with api_client(create_app(database_path=database)) as client:
@@ -112,13 +117,24 @@ async def test_non_retail_dataset_gets_schema_specific_starters(tmp_path: Path) 
         demo_history = await client.get("/history/demo")
         catalog = await client.get("/catalog")
         recommendations = await client.get("/recommendations")
+        demo = await client.post(
+            "/query",
+            json={
+                "question": "How many penguins are there by species?",
+                "demo_id": "penguins-species-count",
+            },
+        )
 
     assert examples.status_code == 200
-    assert examples.json()[0]["question"] == "How many rows are in penguins?"
+    assert len(examples.json()) == 4
+    assert examples.json()[0]["question"] == "How many penguins are there by species?"
     assert demo_history.status_code == 200
-    assert demo_history.json()[0]["id"] == "history-table-count:penguins"
+    assert len(demo_history.json()) == 4
+    assert demo_history.json()[0]["id"] == "history-penguins-species-count"
     assert catalog.json()["table_count"] == 1
-    assert recommendations.json()[0]["demo_id"] == "table-count:penguins"
+    assert recommendations.json()[0]["demo_id"] == "penguins-species-count"
+    assert demo.json()["execution_mode"] == "demo"
+    assert {tuple(row) for row in demo.json()["rows"]} == {("Adelie", 1), ("Gentoo", 1)}
 
 
 @pytest.mark.anyio

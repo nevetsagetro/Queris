@@ -18,6 +18,7 @@ from queris.agent_loop import AgentQueryResult, CorrectingSQLGenerator, run_agen
 from queris.catalog_enrichment import EnrichmentStatus, enrich_schema
 from queris.catalog_profile import CatalogProfile, profile_database
 from queris.chart_recommender import ChartRecommendation, recommend_chart
+from queris.dataset_demos import get_dataset_demo
 from queris.datasets import DatasetInfo, discover_datasets, select_dataset
 from queris.demo_cache import cache_result, cached_result, load_schema_catalog
 from queris.demo_examples import DemoExample, DemoHistoryItem, get_demo_examples, get_demo_history
@@ -377,6 +378,12 @@ def create_app(
             prepared_demo = None
         similar_questions = find_similar_questions(request.question)
         try:
+            active_schema = active_schema_and_enrichment()[0]
+            prepared_dataset_demo = get_dataset_demo(active_schema, request.demo_id)
+            if prepared_dataset_demo is not None and not _questions_match(
+                request.question, prepared_dataset_demo.question
+            ):
+                prepared_dataset_demo = None
             generic_recommendation = (
                 _generic_recommendation(request.demo_id) if request.demo_id else None
             )
@@ -390,10 +397,16 @@ def create_app(
             elif prepared_demo is not None:
                 result = run_demo_query(active_database, prepared_demo)
                 execution_mode = "demo"
+            elif prepared_dataset_demo is not None:
+                result = run_prepared_query(
+                    active_database,
+                    request.question,
+                    prepared_dataset_demo.sql,
+                )
+                execution_mode = "demo"
             elif generic_recommendation is not None:
                 table_name = generic_recommendation
-                schema = active_schema_and_enrichment()[0]
-                if table_name not in {table.name for table in schema.tables}:
+                if table_name not in {table.name for table in active_schema.tables}:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
                         detail="Unknown prepared recommendation",

@@ -121,6 +121,7 @@ two structurally different public examples for review:
 
 ```bash
 queris-dataset chinook
+queris-dataset olist
 queris-dataset penguins
 ```
 

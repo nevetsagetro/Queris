@@ -4,6 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from queris.dataset_demos import get_dataset_demos
 from queris.demo_examples import get_demo_examples
 from queris.schema import DatabaseSchema
 
@@ -65,6 +66,21 @@ def recommend_runs(schema: DatabaseSchema, limit: int = 12) -> tuple[Recommended
         )
         if len(selected) >= limit:
             break
+    if not selected:
+        for priority, demo in enumerate(get_dataset_demos(schema), start=1):
+            selected.append(
+                RecommendedRun(
+                    id=f"recommendation-{demo.id}",
+                    demo_id=demo.id,
+                    question=demo.question,
+                    reason=demo.reason,
+                    tables=demo.tables,
+                    chart=demo.chart,
+                    priority=priority,
+                )
+            )
+            if len(selected) >= limit:
+                break
     if not selected:
         for priority, table_name in enumerate(sorted(table_names), start=1):
             selected.append(

@@ -4,6 +4,7 @@ import argparse
 import csv
 import sqlite3
 import tempfile
+import zipfile
 from pathlib import Path
 from urllib.request import urlopen
 
@@ -13,6 +14,7 @@ CHINOOK_URL = "https://raw.githubusercontent.com/lerocha/chinook-database/master
 PENGUINS_URL = (
     "https://raw.githubusercontent.com/allisonhorst/palmerpenguins/main/inst/extdata/penguins.csv"
 )
+OLIST_URL = "https://www.kaggle.com/api/v1/datasets/download/olistbr/brazilian-ecommerce"
 
 
 def download_dataset(url: str, destination: str | Path) -> Path:
@@ -95,6 +97,44 @@ def build_penguins_database(source: str | Path, destination: str | Path) -> Path
     return destination_path
 
 
+def build_olist_database(source: str | Path, destination: str | Path) -> Path:
+    """Convert the public Olist CSV archive into a local DuckDB database."""
+    source_path = Path(source)
+    destination_path = _require_new_destination(destination)
+    table_files = {
+        "olist_customers_dataset.csv": "olist_customers",
+        "olist_geolocation_dataset.csv": "olist_geolocation",
+        "olist_order_items_dataset.csv": "olist_order_items",
+        "olist_order_payments_dataset.csv": "olist_order_payments",
+        "olist_order_reviews_dataset.csv": "olist_order_reviews",
+        "olist_orders_dataset.csv": "olist_orders",
+        "olist_products_dataset.csv": "olist_products",
+        "olist_sellers_dataset.csv": "olist_sellers",
+        "product_category_name_translation.csv": "product_category_name_translation",
+    }
+    with (
+        zipfile.ZipFile(source_path) as archive,
+        tempfile.TemporaryDirectory(prefix="queris-olist-") as temporary_directory,
+    ):
+        members = set(archive.namelist())
+        if not set(table_files).issubset(members):
+            raise ValueError("Olist archive is missing one or more expected CSV files")
+        archive.extractall(temporary_directory, members=table_files)
+        connection = duckdb.connect(str(destination_path))
+        try:
+            for filename, table_name in table_files.items():
+                csv_path = Path(temporary_directory) / filename
+                escaped_table = _escape(table_name)
+                connection.execute(
+                    f'CREATE TABLE "{escaped_table}" AS '
+                    "SELECT * FROM read_csv_auto(?, header=true, sample_size=-1)",
+                    [str(csv_path)],
+                )
+        finally:
+            connection.close()
+    return destination_path
+
+
 def build_dataset(name: str, output_directory: str | Path = "data") -> Path:
     """Download and materialize one named additional dataset."""
     output = Path(output_directory)
@@ -105,7 +145,10 @@ def build_dataset(name: str, output_directory: str | Path = "data") -> Path:
     if name == "penguins":
         source = download_dataset(PENGUINS_URL, raw / "penguins.csv")
         return build_penguins_database(source, output / "penguins.duckdb")
-    raise ValueError("dataset must be one of: chinook, penguins")
+    if name == "olist":
+        source = download_dataset(OLIST_URL, raw / "olist-brazilian-ecommerce.zip")
+        return build_olist_database(source, output / "olist.duckdb")
+    raise ValueError("dataset must be one of: chinook, olist, penguins")
 
 
 def _require_new_destination(destination: str | Path) -> Path:
@@ -126,7 +169,7 @@ def _float(value: str) -> float | None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build an additional Queris DuckDB dataset")
-    parser.add_argument("dataset", choices=("chinook", "penguins"))
+    parser.add_argument("dataset", choices=("chinook", "olist", "penguins"))
     parser.add_argument("--output-directory", type=Path, default=Path("data"))
     args = parser.parse_args()
     print(build_dataset(args.dataset, args.output_directory))

@@ -1,0 +1,40 @@
+version: 1
+reviewed: true
+tables:
+  - schema_name: main
+    name: penguins
+    description: Field observations of Adelie, Chinstrap, and Gentoo penguins from the Palmer Station region.
+    business_terms: [penguin observation, field observation, specimen]
+    aliases: [penguin records, observations]
+    columns:
+      - name: species
+        description: Penguin species recorded for the observation.
+        business_terms: [species, penguin type]
+        aliases: [kind]
+      - name: island
+        description: Island where the observation was recorded.
+        business_terms: [island, location]
+        aliases: [site, geography]
+      - name: bill_length_mm
+        description: Bill length measured in millimetres.
+        business_terms: [bill length]
+        unit: mm
+      - name: bill_depth_mm
+        description: Bill depth measured in millimetres.
+        business_terms: [bill depth]
+        unit: mm
+      - name: flipper_length_mm
+        description: Flipper length measured in millimetres.
+        business_terms: [flipper length]
+        unit: mm
+      - name: body_mass_g
+        description: Penguin body mass measured in grams.
+        business_terms: [body mass, weight]
+        aliases: [mass]
+        unit: g
+      - name: sex
+        description: Recorded sex of the penguin observation; source missing values may be NA.
+        business_terms: [sex]
+      - name: year
+        description: Year in which the observation was recorded.
+        business_terms: [observation year, year]
