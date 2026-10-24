@@ -110,9 +110,22 @@ attribution. The deterministic `retail.duckdb` fixture remains the test and CI d
 ## React frontend
 
 The React/TypeScript frontend lives under [`frontend/`](frontend/). It exposes the 100 curated
-question starters, a browsable data catalog, session history, and the safe FastAPI query boundary.
-Start the API with `QUERIS_DATABASE=data/online_retail.duckdb queris-api`, then follow
+question starters, a local dataset selector, catalog profiles and relationships, recommended runs,
+session history, chart recommendations, language similarity hints, and the safe FastAPI query
+boundary. Start the API with `QUERIS_DATABASE=data/online_retail.duckdb QUERIS_DATABASE_DIR=data
+queris-api`, then follow
 [`frontend/README.md`](frontend/README.md).
+
+The local dataset folder can contain multiple ignored DuckDB files. The setup commands below add
+two structurally different public examples for review:
+
+```bash
+queris-dataset chinook
+queris-dataset penguins
+```
+
+See [`docs/additional-datasets.md`](docs/additional-datasets.md) for provenance and the
+read-only conversion boundary.
 
 ## Run the API
 

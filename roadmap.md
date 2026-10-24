@@ -6,12 +6,16 @@ This is the source of truth for pending decisions, delivery order, and progress.
 
 ## Current focus
 
-- **Active stage:** Agentic reasoning and generalization upgrades (`[ ]`)
-- **Latest checkpoint:** documented current limitations, concrete safety/retry/no-answer transcripts, scale trade-offs, and the Phase 10–14 upgrade path (2026-07-26).
+- **Active stage:** Product workflow, multi-dataset discovery, and agentic generalization (`[~]`)
+- **Latest checkpoint:** modular React/API workspace, local dataset selection, catalog profiling,
+  reviewed enrichment status, recommendations, chart heuristics, language similarity, and two
+  additional public dataset loaders (2026-10-24).
 - **Completed work:** completed and merged Phases 0–9, including the safe agent, evaluation harness, demo, API, container, CI gates, and structured logging.
-- **Pending next:** Phase 14 held-out generalization testing, prioritized first for independent evidence while preserving the Phase 10–13 dependency sequence.
-- **Resume point:** design the structurally different held-out schema and freeze its cold evaluation protocol before changing prompts or retrieval for that schema.
-- **Last updated:** 2026-07-26
+- **Pending next:** validate the complete multi-dataset workflow and add held-out generalization
+  cases for Chinook and Palmer Penguins.
+- **Resume point:** run the dataset-switch, catalog-profile, recommendation, chart, and language
+  similarity smoke evaluations against all three demo families.
+- **Last updated:** 2026-10-24
 
 ---
 
@@ -237,9 +241,11 @@ results, non-empty explanations, and zero retries.
 ## Phase 15 — Deferred Stretch Goals
 **Status:** optional and outside both the accepted portfolio baseline and the Phase 10–14 reasoning track.
 
-- [ ] React/TypeScript frontend replacing/complementing Streamlit (modular demo registry, API
-  discovery, and browser components implemented; production handoff remains)
-- [ ] Multi-dataset support (schema switch at runtime)
+- [~] React/TypeScript frontend replacing/complementing Streamlit (modular demo registry, API
+  discovery, catalog profile, recommendations, charts, and browser components implemented;
+  production handoff remains)
+- [~] Multi-dataset support (local schema switch at runtime; Chinook and Palmer Penguins setup
+  commands implemented; held-out evaluation remains)
 - [ ] Voice question input through Whisper-compatible speech-to-text, feeding the transcript into the existing validated natural-language query pipeline
 - [ ] Pluggable database-engine adapters, starting with PostgreSQL and preserving dialect-aware SQL validation plus read-only execution boundaries
 - [ ] Evaluate other widely used engines such as MySQL, BigQuery, or Snowflake based on deployment demand and measured compatibility
