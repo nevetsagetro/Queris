@@ -1,7 +1,9 @@
 """Lightweight intent analysis and retrieval of similar validated questions."""
 
+import json
 import re
 import unicodedata
+from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -106,6 +108,44 @@ def find_similar_questions(question: str, limit: int = 5) -> tuple[SimilarQuesti
             )
         )
     return tuple(sorted(candidates, key=lambda item: (-item.similarity, item.demo_id))[:limit])
+
+
+def find_similar_validated_questions(
+    question: str,
+    intelligence_path: str | Path,
+    limit: int = 5,
+) -> tuple[SimilarQuestion, ...]:
+    """Retrieve similar questions from local, already validated intelligence."""
+    path = Path(intelligence_path)
+    if not path.is_file():
+        return ()
+    try:
+        documents = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ()
+    target_tokens = set(_tokens(question))
+    ranked: list[SimilarQuestion] = []
+    for item in documents:
+        candidate = str(item.get("question", ""))
+        candidate_tokens = set(_tokens(candidate))
+        if not candidate or not candidate_tokens:
+            continue
+        similarity = len(target_tokens & candidate_tokens) / max(
+            len(target_tokens | candidate_tokens), 1
+        )
+        if similarity < 0.2:
+            continue
+        ranked.append(
+            SimilarQuestion(
+                question=candidate,
+                demo_id=str(item.get("id", "")),
+                similarity=similarity,
+                intent=analyze_question(candidate),
+                sql_hint=str(item.get("sql", "")) or None,
+            )
+        )
+    ranked.sort(key=lambda item: item.similarity, reverse=True)
+    return tuple(ranked[:limit])
 
 
 def prompt_context(similar_questions: tuple[SimilarQuestion, ...]) -> str:

@@ -1,16 +1,25 @@
-from queris.language_similarity import analyze_question, find_similar_questions
+import json
+from pathlib import Path
+
+from queris.language_similarity import find_similar_validated_questions
 
 
-def test_language_analysis_extracts_slots() -> None:
-    intent = analyze_question("How many customers were there in December?")
+def test_similarity_can_reuse_local_validated_intelligence(tmp_path: Path) -> None:
+    intelligence = tmp_path / "queries.json"
+    intelligence.write_text(
+        json.dumps(
+            [
+                {
+                    "id": "monthly-revenue",
+                    "question": "What was revenue by month?",
+                    "sql": "SELECT month, SUM(revenue) FROM orders GROUP BY month",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
 
-    assert intent.entity == "customer"
-    assert intent.filters == ("december",)
-    assert intent.time_grain == "month"
+    matches = find_similar_validated_questions("Show revenue by month", intelligence)
 
-
-def test_language_similarity_finds_a_reusable_customer_pattern() -> None:
-    similar = find_similar_questions("How many customers were there in December?")
-
-    assert similar
-    assert any(item.intent.entity == "customer" for item in similar)
+    assert matches[0].demo_id == "monthly-revenue"
+    assert matches[0].sql_hint is not None

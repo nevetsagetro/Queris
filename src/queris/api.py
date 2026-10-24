@@ -29,6 +29,7 @@ from queris.language_similarity import (
     SimilarQuestion,
     analyze_question,
     find_similar_questions,
+    find_similar_validated_questions,
     prompt_context,
 )
 from queris.pipeline import FullSchemaSelector
@@ -395,7 +396,16 @@ def create_app(
             request.question, prepared_demo.example.question
         ):
             prepared_demo = None
-        similar_questions = find_similar_questions(request.question)
+        intelligence_path = (
+            workspace_directory / "intelligence" / f"{active_database.stem}.queries.json"
+            if workspace_directory is not None
+            else None
+        )
+        similar_questions = (
+            find_similar_validated_questions(request.question, intelligence_path)
+            if intelligence_path is not None
+            else ()
+        ) or find_similar_questions(request.question)
         try:
             active_schema = active_schema_and_enrichment()[0]
             prepared_dataset_demo = get_dataset_demo(active_schema, request.demo_id)

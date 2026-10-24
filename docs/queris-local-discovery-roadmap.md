@@ -116,7 +116,7 @@ unbounded rows, or arbitrary database tools to the LLM.
 - [x] Generate 50–60 starters per sufficiently rich schema.
 - [x] Cover discovery, quality, aggregation, time series, joins, CTEs, windows, cohorts, and outliers.
 - [x] Include question, SQL, tables, chart type, rationale, and result metadata.
-- [ ] Use similar validated questions as bounded prompt context.
+- [x] Use similar validated questions from local intelligence as bounded prompt context.
 - [x] Execute every generated query through the read-only validator.
 - [x] Store pass/fail results and never publish failed starters as ready-to-run.
 - [x] Add chart suitability confidence to each validated result.
