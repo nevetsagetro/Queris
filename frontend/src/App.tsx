@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { loadDiscovery, queryData, replayQuery, selectDataset } from "./api/client";
-import { CatalogProfile, DatasetInfo, DemoHistoryItem, EnrichmentStatus, Example, QueryResult, RecommendedRun, View } from "./types";
+import { Catalog, CatalogProfile, DatasetInfo, DemoHistoryItem, EnrichmentStatus, Example, QueryResult, RecommendedRun, View } from "./types";
 import { AskView } from "./components/AskView";
 import { CatalogView } from "./components/CatalogView";
 import { HistoryView } from "./components/HistoryView";

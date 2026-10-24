@@ -123,6 +123,13 @@ export type QueryResult = {
   cache_hit: boolean;
   execution_mode: "llm" | "cache" | "demo";
   chart_recommendation: ChartRecommendation | null;
+  similar_questions: SimilarQuestion[];
+};
+
+export type SimilarQuestion = {
+  question: string;
+  demo_id: string;
+  similarity: number;
 };
 
 export type ChartRecommendation = {
