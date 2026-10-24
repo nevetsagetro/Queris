@@ -26,12 +26,11 @@ export function CatalogView({ catalog, profile, enrichment, dataset, examples, o
           <div>
             <p className="eyebrow">Active dataset</p>
             <h2>{dataset.name}</h2>
-            <p className="dataset-tagline">{dataset.source_name ?? "Local DuckDB file"}</p>
+            <p className="dataset-tagline"><span>{dataset.source_name ?? "Local DuckDB file"}</span>{dataset.source_url ? <a href={dataset.source_url} target="_blank" rel="noreferrer" aria-label={`Open public source for ${dataset.name}`} title="Open public source">Source ↗</a> : null}</p>
           </div>
           <div className="dataset-facts">
             <span><small>Local file</small><strong>{dataset.id}</strong></span>
             {dataset.license && <span><small>License</small><strong>{dataset.license}</strong></span>}
-            {dataset.source_url ? <a href={dataset.source_url} target="_blank" rel="noreferrer" aria-label={`Open public source for ${dataset.name}`} title="Open public source">Source ↗</a> : null}
           </div>
         </div>
       )}
