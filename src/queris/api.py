@@ -51,6 +51,7 @@ LOGGED_ROUTES = frozenset(
         "/examples",
         "/history/demo",
         "/query",
+        "/query/replay",
     }
 )
 NonEmptyQuestion = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
@@ -87,6 +88,15 @@ class QueryRequest(BaseModel):
 
     question: NonEmptyQuestion
     demo_id: str | None = None
+
+
+class ReplayQueryRequest(BaseModel):
+    """Previously validated question and SQL to execute without an LLM."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    question: NonEmptyQuestion
+    sql: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class DatasetSelectionRequest(BaseModel):
@@ -452,6 +462,33 @@ def create_app(
             cache_hit=cache_hit,
             execution_mode=execution_mode,
             similar_questions=similar_questions,
+        )
+
+    @application.post("/query/replay", response_model=QueryResponse)
+    async def replay_query(request: ReplayQueryRequest, http_request: Request) -> QueryResponse:
+        """Replay saved read-only SQL without constructing or calling an LLM."""
+        if not active_database.is_file():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Configured database is unavailable",
+            )
+        try:
+            result = run_prepared_query(active_database, request.question, request.sql)
+        except ValueError as error:
+            http_request.state.query_decision = "not_executed"
+            http_request.state.retry_count = 0
+            http_request.state.blocked = False
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)
+            ) from error
+        http_request.state.query_decision = "allowed"
+        http_request.state.retry_count = 0
+        http_request.state.blocked = False
+        http_request.state.agent_latency_ms = round(result.latency_ms, 3)
+        return QueryResponse.from_agent_result(
+            result,
+            cache_hit=True,
+            execution_mode="cache",
         )
 
     return application

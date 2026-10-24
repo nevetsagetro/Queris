@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { loadDiscovery, queryData, selectDataset } from "./api/client";
+import { loadDiscovery, queryData, replayQuery, selectDataset } from "./api/client";
 import { CatalogProfile, DatasetInfo, DemoHistoryItem, EnrichmentStatus, Example, QueryResult, RecommendedRun, View } from "./types";
 import { AskView } from "./components/AskView";
 import { CatalogView } from "./components/CatalogView";
@@ -53,7 +53,10 @@ function App() {
     setBusy(true);
     setError(null);
     try {
-      const nextResult = await queryData(nextQuestion, nextDemoId ?? undefined);
+      const savedAnalysis = history.find((item) => item.sql && normalizeQuestion(item.question) === normalizeQuestion(nextQuestion));
+      const nextResult = savedAnalysis?.sql
+        ? await replayQuery(nextQuestion, savedAnalysis.sql)
+        : await queryData(nextQuestion, nextDemoId ?? undefined);
       setResult(nextResult);
       setSelectedDemoId(null);
       if (!nextResult.cache_hit) {
@@ -154,6 +157,10 @@ function App() {
 
 function readHistory(): QueryResult[] {
   try { return JSON.parse(window.localStorage.getItem("queris.history") ?? "[]") as QueryResult[]; } catch { return []; }
+}
+
+function normalizeQuestion(question: string): string {
+  return question.trim().replace(/\s+/g, " ").toLocaleLowerCase();
 }
 
 export default App;

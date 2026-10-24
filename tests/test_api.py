@@ -159,6 +159,27 @@ async def test_query_reuses_api_cache(
 
 
 @pytest.mark.anyio
+async def test_replay_executes_saved_sql_without_generator(sample_database: Path) -> None:
+    def generator_factory() -> StaticGenerator:
+        raise AssertionError("replay must not construct an LLM generator")
+
+    app = create_app(database_path=sample_database, generator_factory=generator_factory)
+    async with api_client(app) as client:
+        response = await client.post(
+            "/query/replay",
+            json={
+                "question": "How many orders are there?",
+                "sql": "SELECT COUNT(*) AS order_count FROM orders",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["execution_mode"] == "cache"
+    assert response.json()["cache_hit"] is True
+    assert response.json()["rows"] == [[4]]
+
+
+@pytest.mark.anyio
 async def test_demo_query_uses_prepared_sql_without_generator(
     sample_database: Path,
 ) -> None:

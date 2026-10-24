@@ -35,3 +35,11 @@ export function queryData(question: string, demoId?: string): Promise<QueryResul
     body: JSON.stringify({ question, ...(demoId ? { demo_id: demoId.replace("history-", "") } : {}) }),
   });
 }
+
+export function replayQuery(question: string, sql: string): Promise<QueryResult> {
+  return fetchJson<QueryResult>("/query/replay", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ question, sql }),
+  });
+}
