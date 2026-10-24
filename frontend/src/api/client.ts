@@ -1,6 +1,6 @@
 import { Catalog, CatalogProfile, DatasetInfo, DemoHistoryItem, EnrichmentStatus, Example, MetricsSummary, QueryResult, RecommendedRun, RuntimeInfo } from "../types";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8001";
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 
 export async function fetchJson<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, options);
