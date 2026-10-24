@@ -277,7 +277,7 @@ def create_app(
 
     @application.get("/datasets", response_model=tuple[DatasetInfo, ...])
     async def datasets() -> tuple[DatasetInfo, ...]:
-        return discover_datasets(dataset_directory, active_database)
+        return discover_datasets(dataset_directory, active_database, metadata_directory)
 
     @application.post("/datasets/select", response_model=tuple[DatasetInfo, ...])
     async def select_dataset_route(request: DatasetSelectionRequest) -> tuple[DatasetInfo, ...]:
@@ -289,7 +289,7 @@ def create_app(
         query_cache.clear()
         schema_cache.clear()
         profile_cache.clear()
-        return discover_datasets(dataset_directory, active_database)
+        return discover_datasets(dataset_directory, active_database, metadata_directory)
 
     def active_schema_and_enrichment() -> tuple[DatabaseSchema, EnrichmentStatus]:
         raw_schema = load_schema_catalog(schema_cache, active_database)

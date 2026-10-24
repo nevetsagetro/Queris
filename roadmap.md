@@ -7,14 +7,14 @@ This is the source of truth for pending decisions, delivery order, and progress.
 ## Current focus
 
 - **Active stage:** Product workflow, multi-dataset discovery, and agentic generalization (`[~]`)
-- **Latest checkpoint:** modular React/API workspace, local dataset selection, catalog profiling,
-  reviewed enrichment status, recommendations, chart heuristics, language similarity, and two
-  additional public dataset loaders (2026-10-24).
-- **Completed work:** completed and merged Phases 0–9, including the safe agent, evaluation harness, demo, API, container, CI gates, and structured logging.
-- **Pending next:** validate the complete multi-dataset workflow and add held-out generalization
-  cases for Chinook and Palmer Penguins.
-- **Resume point:** run the dataset-switch, catalog-profile, recommendation, chart, and language
-  similarity smoke evaluations against all three demo families.
+- **Latest checkpoint:** modular React/API workspace plus a repeatable read-only dataset registration
+  workflow with provenance manifests, enrichment drafts, catalog relationships, and 50 validated
+  starters per dataset (2026-10-24).
+- **Completed work:** completed and merged Phases 0–9, including the safe agent, evaluation harness, demo, API, container, CI gates, structured logging, and multi-dataset registration workflow.
+- **Pending next:** add held-out generalization cases for Chinook, Palmer Penguins, and a newly
+  registered unknown schema.
+- **Resume point:** run the dataset-switch and held-out generalization smoke evaluations against
+  the workflow reports for all demo families.
 - **Last updated:** 2026-10-24
 
 ---
@@ -244,8 +244,8 @@ results, non-empty explanations, and zero retries.
 - [~] React/TypeScript frontend replacing/complementing Streamlit (modular demo registry, API
   discovery, catalog profile, recommendations, charts, and browser components implemented;
   production handoff remains)
-- [~] Multi-dataset support (local schema switch at runtime; Chinook and Palmer Penguins setup
-  commands implemented; held-out evaluation remains)
+- [~] Multi-dataset support (local schema switch, provenance manifests, enrichment workflow, catalog
+  profiling, and 50 validated starters implemented; held-out evaluation remains)
 - [ ] Voice question input through Whisper-compatible speech-to-text, feeding the transcript into the existing validated natural-language query pipeline
 - [ ] Pluggable database-engine adapters, starting with PostgreSQL and preserving dialect-aware SQL validation plus read-only execution boundaries
 - [ ] Evaluate other widely used engines such as MySQL, BigQuery, or Snowflake based on deployment demand and measured compatibility

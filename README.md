@@ -128,6 +128,25 @@ queris-dataset penguins
 See [`docs/additional-datasets.md`](docs/additional-datasets.md) for provenance and the
 read-only conversion boundary.
 
+### Add another dataset
+
+An existing DuckDB file can join the same catalog workflow without editing application code:
+
+```bash
+queris-dataset-workflow data/example.duckdb \
+  --dataset-name "Example Dataset" \
+  --source-name "Public publisher" \
+  --source-url "https://example.org/dataset" \
+  --license "Publisher terms" \
+  --draft metadata/example.v1.yaml \
+  --report reports/example.workflow.json
+```
+
+The command records public provenance, profiles tables and probable relationships, drafts reviewed
+catalog metadata, generates and executes deterministic starters, and reports whether the dataset
+is ready. Review the YAML and change `reviewed` to `true` before re-running. No command in this
+workflow writes to the DuckDB file; runtime connections remain read-only.
+
 ## Run the API
 
 ```bash

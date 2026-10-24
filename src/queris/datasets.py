@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 from pathlib import Path
 
+import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
 DATASET_PROVENANCE: dict[str, dict[str, str]] = {
@@ -48,7 +49,22 @@ class DatasetInfo(BaseModel):
     active: bool
 
 
-def discover_datasets(directory: str | Path, active_path: str | Path) -> tuple[DatasetInfo, ...]:
+class DatasetSource(BaseModel):
+    """Public provenance registered for a locally available dataset."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    name: str = Field(min_length=1)
+    source_name: str | None = None
+    source_url: str = Field(min_length=1)
+    license: str | None = None
+
+
+def discover_datasets(
+    directory: str | Path,
+    active_path: str | Path,
+    metadata_directory: str | Path | None = None,
+) -> tuple[DatasetInfo, ...]:
     """List DuckDB files in a trusted directory without exposing local paths."""
     root = Path(directory).expanduser().resolve()
     active = Path(active_path).expanduser().resolve()
@@ -59,21 +75,48 @@ def discover_datasets(directory: str | Path, active_path: str | Path) -> tuple[D
         if not path.is_file():
             continue
         stat = path.stat()
+        source = _source_for(path, metadata_directory)
         datasets.append(
             DatasetInfo(
                 id=path.name,
-                name=DATASET_PROVENANCE.get(path.name, {}).get(
+                name=source.name
+                if source
+                else DATASET_PROVENANCE.get(path.name, {}).get(
                     "display_name", path.stem.replace("_", " ").title()
                 ),
-                source_name=DATASET_PROVENANCE.get(path.name, {}).get("source_name"),
-                source_url=DATASET_PROVENANCE.get(path.name, {}).get("source_url"),
-                license=DATASET_PROVENANCE.get(path.name, {}).get("license"),
+                source_name=(
+                    source.source_name
+                    if source
+                    else DATASET_PROVENANCE.get(path.name, {}).get("source_name")
+                ),
+                source_url=(
+                    source.source_url
+                    if source
+                    else DATASET_PROVENANCE.get(path.name, {}).get("source_url")
+                ),
+                license=source.license
+                if source
+                else DATASET_PROVENANCE.get(path.name, {}).get("license"),
                 size_bytes=stat.st_size,
                 modified_at=datetime.fromtimestamp(stat.st_mtime, tz=UTC),
                 active=path.resolve() == active,
             )
         )
     return tuple(datasets)
+
+
+def _source_for(path: Path, metadata_directory: str | Path | None) -> DatasetSource | None:
+    """Load an optional source manifest, failing closed on invalid metadata."""
+    if metadata_directory is None:
+        return None
+    manifest = Path(metadata_directory) / f"{path.stem}.source.yaml"
+    if not manifest.is_file():
+        return None
+    try:
+        document = yaml.safe_load(manifest.read_text(encoding="utf-8"))
+        return DatasetSource.model_validate(document)
+    except (OSError, yaml.YAMLError, ValueError):
+        return None
 
 
 def select_dataset(directory: str | Path, dataset_id: str) -> Path:

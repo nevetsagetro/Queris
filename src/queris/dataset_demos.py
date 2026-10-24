@@ -22,7 +22,7 @@ class DatasetDemo:
 
 
 def get_dataset_demos(schema: DatabaseSchema) -> tuple[DatasetDemo, ...]:
-    """Return deterministic demos for a recognized public dataset shape."""
+    """Return deterministic demos for a recognized or newly registered schema."""
     table_names = {table.name for table in schema.tables}
     olist = (
         _olist_demos(schema) if {"olist_orders", "olist_order_items"}.issubset(table_names) else ()
@@ -34,7 +34,7 @@ def get_dataset_demos(schema: DatabaseSchema) -> tuple[DatasetDemo, ...]:
         return _pad_dataset_demos(schema, penguins)
     if {"Track", "Album", "Artist"}.issubset(table_names):
         return _pad_dataset_demos(schema, ())
-    return ()
+    return _pad_dataset_demos(schema, ()) if schema.tables else ()
 
 
 def get_dataset_demo(schema: DatabaseSchema, demo_id: str | None) -> DatasetDemo | None:
@@ -344,6 +344,8 @@ def _pad_dataset_demos(
                         sql=f"SELECT {_quote(dimension.name)}, ROUND(AVG({_quote(measure.name)}), 2) AS average_value FROM {_quote(table.name)} WHERE {_quote(measure.name)} IS NOT NULL GROUP BY {_quote(dimension.name)} ORDER BY average_value DESC LIMIT 20",
                     )
                 )
+
+    demos.extend(_generic_profile_demos(schema))
     unique: list[DatasetDemo] = []
     for demo in demos:
         if demo.id not in existing:
@@ -352,6 +354,171 @@ def _pad_dataset_demos(
         if len(curated) + len(unique) >= target:
             break
     return tuple((*curated, *unique))
+
+
+def _generic_profile_demos(schema: DatabaseSchema) -> tuple[DatasetDemo, ...]:
+    """Add portable quality, distribution, and window starters for an unknown schema."""
+    demos: list[DatasetDemo] = []
+    numeric_types = ("INTEGER", "BIGINT", "DOUBLE", "DECIMAL", "FLOAT", "HUGEINT")
+    for table in schema.tables:
+        table_name = _quote(table.name)
+        for column in table.columns:
+            name = _quote(column.name)
+            identifier = f"{table.name}-{column.name}"
+            demos.extend(
+                (
+                    DatasetDemo(
+                        id=f"quality-null-{identifier}",
+                        question=f"How many {column.name} values are missing in {table.name}?",
+                        reason="Missingness is a first-pass data quality check for every field.",
+                        tables=(table.name,),
+                        chart="metric",
+                        sql=f"SELECT COUNT(*) FILTER (WHERE {name} IS NULL) AS missing_count FROM {table_name}",
+                    ),
+                    DatasetDemo(
+                        id=f"quality-present-{identifier}",
+                        question=f"How complete is {column.name} in {table.name}?",
+                        reason="Completeness measures how much usable data a field contains.",
+                        tables=(table.name,),
+                        chart="metric",
+                        sql=f"SELECT ROUND(100.0 * COUNT({name}) / NULLIF(COUNT(*), 0), 2) AS completeness_percent FROM {table_name}",
+                    ),
+                    DatasetDemo(
+                        id=f"quality-cardinality-{identifier}",
+                        question=f"What is the cardinality ratio of {column.name} in {table.name}?",
+                        reason="Cardinality distinguishes identifiers from repeated business dimensions.",
+                        tables=(table.name,),
+                        chart="metric",
+                        sql=f"SELECT ROUND(1.0 * COUNT(DISTINCT {name}) / NULLIF(COUNT({name}), 0), 4) AS cardinality_ratio FROM {table_name}",
+                    ),
+                    DatasetDemo(
+                        id=f"quality-duplicates-{identifier}",
+                        question=f"How many repeated {column.name} values are in {table.name}?",
+                        reason="Repeated values help distinguish identifiers from reusable dimensions.",
+                        tables=(table.name,),
+                        chart="metric",
+                        sql=f"SELECT COUNT({name}) - COUNT(DISTINCT {name}) AS repeated_value_count FROM {table_name}",
+                    ),
+                    DatasetDemo(
+                        id=f"distribution-top-{identifier}",
+                        question=f"What are the most frequent {column.name} values in {table.name}?",
+                        reason="Frequency ranking is a portable first look at any categorical field.",
+                        tables=(table.name,),
+                        chart="bar",
+                        sql=f"SELECT {name}, COUNT(*) AS value_count FROM {table_name} WHERE {name} IS NOT NULL GROUP BY {name} ORDER BY value_count DESC LIMIT 10",
+                    ),
+                    DatasetDemo(
+                        id=f"distribution-rare-{identifier}",
+                        question=f"What are the least frequent {column.name} values in {table.name}?",
+                        reason="The long tail can expose rare segments or inconsistent values.",
+                        tables=(table.name,),
+                        chart="bar",
+                        sql=f"SELECT {name}, COUNT(*) AS value_count FROM {table_name} WHERE {name} IS NOT NULL GROUP BY {name} ORDER BY value_count LIMIT 10",
+                    ),
+                    DatasetDemo(
+                        id=f"distribution-ascending-{identifier}",
+                        question=f"What are the first ordered {column.name} values in {table.name}?",
+                        reason="An ordered sample makes ranges and unexpected values visible.",
+                        tables=(table.name,),
+                        chart="table",
+                        sql=f"SELECT DISTINCT {name} FROM {table_name} WHERE {name} IS NOT NULL ORDER BY {name} LIMIT 10",
+                    ),
+                    DatasetDemo(
+                        id=f"distribution-descending-{identifier}",
+                        question=f"What are the last ordered {column.name} values in {table.name}?",
+                        reason="The upper end of an ordered field provides a complementary boundary check.",
+                        tables=(table.name,),
+                        chart="table",
+                        sql=f"SELECT DISTINCT {name} FROM {table_name} WHERE {name} IS NOT NULL ORDER BY {name} DESC LIMIT 10",
+                    ),
+                )
+            )
+            if column.data_type.upper().split("(", 1)[0] in numeric_types:
+                demos.extend(
+                    (
+                        DatasetDemo(
+                            id=f"numeric-median-{identifier}",
+                            question=f"What is the median {column.name} in {table.name}?",
+                            reason="The median provides a robust center for a numeric measure.",
+                            tables=(table.name,),
+                            chart="metric",
+                            sql=f"SELECT ROUND(MEDIAN({name}), 2) AS median_value FROM {table_name}",
+                        ),
+                        DatasetDemo(
+                            id=f"numeric-spread-{identifier}",
+                            question=f"What is the spread of {column.name} in {table.name}?",
+                            reason="Standard deviation gives a compact view of numeric variation.",
+                            tables=(table.name,),
+                            chart="metric",
+                            sql=f"SELECT ROUND(STDDEV_POP({name}), 2) AS standard_deviation FROM {table_name}",
+                        ),
+                        DatasetDemo(
+                            id=f"numeric-quantiles-{identifier}",
+                            question=f"What are the quartiles of {column.name} in {table.name}?",
+                            reason="Quartiles expose skew and outliers without returning raw rows.",
+                            tables=(table.name,),
+                            chart="table",
+                            sql=f"SELECT ROUND(QUANTILE_CONT({name}, 0.25), 2) AS p25, ROUND(QUANTILE_CONT({name}, 0.5), 2) AS p50, ROUND(QUANTILE_CONT({name}, 0.75), 2) AS p75 FROM {table_name}",
+                        ),
+                        DatasetDemo(
+                            id=f"numeric-ascending-{identifier}",
+                            question=f"What are the smallest {column.name} values in {table.name}?",
+                            reason="A bounded ordered sample highlights the lower end of a measure.",
+                            tables=(table.name,),
+                            chart="table",
+                            sql=f"SELECT {name} FROM {table_name} WHERE {name} IS NOT NULL ORDER BY {name} LIMIT 10",
+                        ),
+                        DatasetDemo(
+                            id=f"numeric-descending-{identifier}",
+                            question=f"What are the largest {column.name} values in {table.name}?",
+                            reason="A bounded ordered sample highlights the upper end of a measure.",
+                            tables=(table.name,),
+                            chart="table",
+                            sql=f"SELECT {name} FROM {table_name} WHERE {name} IS NOT NULL ORDER BY {name} DESC LIMIT 10",
+                        ),
+                    )
+                )
+            elif column.data_type.upper().startswith("VARCHAR"):
+                demos.extend(
+                    (
+                        DatasetDemo(
+                            id=f"text-length-{identifier}",
+                            question=f"What is the text length profile of {column.name} in {table.name}?",
+                            reason="Text length helps identify inconsistent labels and identifiers.",
+                            tables=(table.name,),
+                            chart="table",
+                            sql=f"SELECT MIN(LENGTH({name})) AS shortest, ROUND(AVG(LENGTH({name})), 2) AS average_length, MAX(LENGTH({name})) AS longest FROM {table_name} WHERE {name} IS NOT NULL",
+                        ),
+                        DatasetDemo(
+                            id=f"text-top-{identifier}",
+                            question=f"What are the most common {column.name} values in {table.name}?",
+                            reason="A bounded frequency table surfaces dominant categories.",
+                            tables=(table.name,),
+                            chart="bar",
+                            sql=f"SELECT {name}, COUNT(*) AS value_count FROM {table_name} WHERE {name} IS NOT NULL GROUP BY {name} ORDER BY value_count DESC LIMIT 20",
+                        ),
+                        DatasetDemo(
+                            id=f"text-rare-{identifier}",
+                            question=f"Which {column.name} values are rare in {table.name}?",
+                            reason="Rare categories can reveal data-quality issues or useful long-tail segments.",
+                            tables=(table.name,),
+                            chart="bar",
+                            sql=f"SELECT {name}, COUNT(*) AS value_count FROM {table_name} WHERE {name} IS NOT NULL GROUP BY {name} ORDER BY value_count LIMIT 20",
+                        ),
+                    )
+                )
+        for limit in (5, 10, 25, 50, 100):
+            demos.append(
+                DatasetDemo(
+                    id=f"catalog-preview-{table.name}-{limit}",
+                    question=f"Show a preview of {table.name} with {limit} rows.",
+                    reason="A bounded preview helps a new user understand the table shape.",
+                    tables=(table.name,),
+                    chart="table",
+                    sql=f"SELECT * FROM {table_name} LIMIT {limit}",
+                )
+            )
+    return tuple(demos)
 
 
 def _quote(identifier: str) -> str:
